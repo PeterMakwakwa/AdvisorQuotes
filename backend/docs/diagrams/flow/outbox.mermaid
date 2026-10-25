@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    participant API as Request (trace T)
+    participant UoW as UnitOfWork
+    participant DB as PostgreSQL
+    participant D as OutboxDispatcher (background, any instance)
+    participant B as Broker
+    API->>UoW: SaveChanges (the quote raised QuoteCreated)
+    UoW->>DB: one transaction: quote, history, key + outbox_messages row (trace_parent = T)
+    Note over API,DB: the change and its event are stored together or not at all
+    loop every 2 s
+        D->>DB: claim: UPDATE … SET locked_until, lock_token WHERE id IN (SELECT due … FOR UPDATE SKIP LOCKED) RETURNING *
+        Note over D,DB: one short statement, committed at once: no lock held while publishing
+        D->>B: publish (span "quotes.quote-created.v1 publish", child of T)
+        alt published
+            D->>DB: processed_at = now, release lease … WHERE lock_token = ours
+        else failed
+            D->>DB: attempts + 1, next_attempt_at = now + backoff … WHERE lock_token = ours
+        end
+    end
+    Note over D,DB: a dispatcher that dies: its lease expires and another instance reclaims the message

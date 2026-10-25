@@ -1,0 +1,21 @@
+flowchart LR
+    ui([Adviser UI]) --> quotes
+
+    subgraph quotes [Quote service - this solution]
+        qapi[Quotes API<br/>capture · status · history]
+        qdb[(Quotes DB)]
+        qob[Outbox]
+        qapi --> qdb
+        qapi --> qob
+    end
+
+    subgraph pricing [Pricing service - split out later]
+        papi[Pricing API<br/>rate tables · versions]
+    end
+
+    qapi -->|IPricingService<br/>today in-process, later HTTP / gRPC| papi
+    qob -->|quote-created.v1<br/>quote-status-changed.v1| bus([EventBridge / SNS])
+    bus --> crm[CRM]
+    bus --> notify[Client notifications]
+    bus --> analytics[Analytics / conversion]
+    qdb -. read replica / search index behind IQuoteReadService .-> reads[(Read model)]

@@ -1,0 +1,17 @@
+flowchart LR
+    users([Advisers]) --> waf[AWS WAF] --> alb[ALB<br/>HTTPS / ACM]
+    alb --> ecs
+    subgraph ecs [ECS Fargate service · 2+ tasks across AZs]
+        api[Quotes.Api container<br/>API + outbox dispatcher + maintenance]
+        adot[ADOT collector sidecar]
+        api -->|OTLP| adot
+    end
+    api --> rds[(RDS PostgreSQL 17<br/>Multi-AZ, private subnets)]
+    api -->|events| eb[EventBridge / SNS]
+    eb --> consumers([CRM · notifications · analytics])
+    adot --> xray[X-Ray traces]
+    adot --> cw[CloudWatch metrics]
+    api -->|stdout| logs[CloudWatch Logs]
+    sm[Secrets Manager] -. connection string .-> api
+    ci[CI/CD] --> ecr[ECR image] --> ecs
+    ci --> migrate[grate one-off ECS task] --> rds

@@ -1,0 +1,52 @@
+erDiagram
+    quotes ||--o{ quote_status_changes : "history"
+    quotes ||--o{ idempotency_keys : "created by"
+    quotes {
+        uuid id PK "version 7, app-generated"
+        varchar external_reference UK "Q-year-number"
+        varchar adviser_id
+        varchar adviser_reference "optional"
+        varchar client_name
+        date client_date_of_birth
+        boolean client_is_smoker
+        varchar product_code
+        numeric cover_amount "18,2"
+        smallint term_years
+        numeric monthly_premium "18,2"
+        char currency
+        varchar status "CHECK"
+        varchar pricing_version
+        varchar notes
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    quote_status_changes {
+        uuid id PK
+        uuid quote_id FK
+        varchar from_status "null for the first entry"
+        varchar to_status
+        varchar reason
+        varchar changed_by
+        timestamptz changed_at
+    }
+    idempotency_keys {
+        varchar adviser_id PK
+        varchar idempotency_key PK
+        char request_hash "SHA-256"
+        uuid quote_id FK
+        timestamptz created_at
+        timestamptz expires_at
+    }
+    outbox_messages {
+        uuid id PK "= event id"
+        varchar event_type "quotes.quote-created.v1"
+        jsonb payload
+        timestamptz occurred_at
+        varchar trace_parent "W3C trace context"
+        integer attempts
+        timestamptz next_attempt_at "backoff"
+        timestamptz processed_at
+        varchar last_error
+        timestamptz locked_until "lease"
+        uuid lock_token "lease owner"
+    }

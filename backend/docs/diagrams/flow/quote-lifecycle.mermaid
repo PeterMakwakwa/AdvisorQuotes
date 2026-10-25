@@ -1,0 +1,8 @@
+stateDiagram-v2
+    [*] --> Draft: Quote.Create
+    Draft --> SentToClient
+    Draft --> Declined: reason required
+    SentToClient --> Accepted
+    SentToClient --> Declined: reason required
+    Accepted --> [*]
+    Declined --> [*]

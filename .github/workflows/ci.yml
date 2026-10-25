@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-and-test:
+    name: Build, format, test, audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore AdvisorQuotes.slnx
+
+      - name: Check formatting (.editorconfig)
+        run: dotnet format AdvisorQuotes.slnx --verify-no-changes --no-restore
+
+      - name: Build (warnings are errors)
+        run: dotnet build AdvisorQuotes.slnx --configuration Release --no-restore
+
+      # Unit, architecture and integration tests. Ubuntu runners have Docker, so Testcontainers starts PostgreSQL
+      # and the integration tests apply backend/src/dbQuotes/up exactly as grate does.
+      - name: Test
+        run: >
+          dotnet test AdvisorQuotes.slnx --configuration Release --no-build
+          --logger "trx;LogFilePrefix=test-results"
+          --collect "XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Fail on vulnerable packages
+        run: |
+          dotnet list AdvisorQuotes.slnx package --vulnerable --include-transitive | tee vulnerable.txt
+          if grep -q "has the following vulnerable packages" vulnerable.txt; then
+            echo "::error::Vulnerable NuGet packages found (see the log above)."
+            exit 1
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: backend/TestResults
+
+  frontend:
+    name: UI lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0   # same as the UI's Dockerfile
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Unit, component and axe accessibility tests (Vitest, jsdom).
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Fail on vulnerable packages
+        run: npm audit --omit=dev --audit-level=high
+
+  docker:
+    name: Validate compose and build the images
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build-and-test, frontend]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
+      - name: Build API image
+        run: docker build --file backend/build/docker/Dockerfile --tag advisor-quotes-api:${{ github.sha }} backend
+
+      - name: Build UI image
+        run: docker build --tag advisor-quotes-web:${{ github.sha }} frontend

@@ -1,0 +1,84 @@
+# Demo flow: create a quote, retry it, then move it through its lifecycle.
+# Each response carries X-Trace-Id; search the logs or Jaeger for it to follow the request.
+# Port 5039 = dotnet run (launch profile "http"); use 8080 for the docker compose API.
+@baseUrl = http://localhost:5039
+@quotes = {{baseUrl}}/api/v1/quotes
+
+### 1. Create a quote (the server calculates the premium)
+# @name createQuote
+POST {{quotes}}
+Content-Type: application/json
+Idempotency-Key: demo-quote-001
+
+{
+  "adviserId": "ADV-001",
+  "adviserReference": "CRM-2026-0042",
+  "client": { "fullName": "Thandi Nkosi", "dateOfBirth": "1991-01-01", "isSmoker": false },
+  "product": { "productCode": "TERM_LIFE", "coverAmount": 1000000, "termYears": 20 },
+  "notes": "Client wants cover until retirement"
+}
+
+### 2. Send the same request again: same quote back, header Idempotent-Replayed: true
+# (Harmless differences such as "term_life" or extra spaces are normalised and still count as the same request.)
+POST {{quotes}}
+Content-Type: application/json
+Idempotency-Key: demo-quote-001
+
+{
+  "adviserId": "ADV-001",
+  "adviserReference": "CRM-2026-0042",
+  "client": { "fullName": "Thandi Nkosi", "dateOfBirth": "1991-01-01", "isSmoker": false },
+  "product": { "productCode": "TERM_LIFE", "coverAmount": 1000000, "termYears": 20 },
+  "notes": "Client wants cover until retirement"
+}
+
+### 3. Same key, different body: 422 Idempotency.KeyReused
+POST {{quotes}}
+Content-Type: application/json
+Idempotency-Key: demo-quote-001
+
+{
+  "adviserId": "ADV-001",
+  "client": { "fullName": "Thandi Nkosi", "dateOfBirth": "1991-01-01", "isSmoker": false },
+  "product": { "productCode": "TERM_LIFE", "coverAmount": 2000000, "termYears": 20 }
+}
+
+### 4. View the quote
+GET {{quotes}}/{{createQuote.response.body.$.id}}
+
+### 5. Send it to the client
+POST {{quotes}}/{{createQuote.response.body.$.id}}/status-changes
+Content-Type: application/json
+
+{ "newStatus": "SentToClient", "reason": "Emailed to client", "changedBy": "ADV-001" }
+
+### 6. Client accepts
+POST {{quotes}}/{{createQuote.response.body.$.id}}/status-changes
+Content-Type: application/json
+
+{ "newStatus": "Accepted", "changedBy": "ADV-001" }
+
+### 7. Not allowed any more: 409 Quote.InvalidStatusTransition
+POST {{quotes}}/{{createQuote.response.body.$.id}}/status-changes
+Content-Type: application/json
+
+{ "newStatus": "Declined", "reason": "Changed mind", "changedBy": "ADV-001" }
+
+### 8. List the adviser's quotes, newest first (keyset paging)
+# @name listQuotes
+GET {{quotes}}?adviserId=ADV-001&pageSize=2
+
+### 9. Next page: pass back nextCursor (it is null on the last page)
+GET {{quotes}}?adviserId=ADV-001&pageSize=2&cursor={{listQuotes.response.body.$.nextCursor}}
+
+### 10. Find quotes by the adviser's own reference (for example their CRM case number)
+GET {{quotes}}?adviserId=ADV-001&adviserReference=CRM-2026-0042
+
+### 11. Readiness (database reachable and migrated)
+GET {{baseUrl}}/health/ready
+
+### 12. Prometheus metrics (quotes_application_*, quotes_infrastructure_messaging_*, ASP.NET Core, runtime)
+GET {{baseUrl}}/metrics
+
+### 13. OpenAPI document (the Scalar UI is at /scalar)
+GET {{baseUrl}}/openapi/v1.json

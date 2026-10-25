@@ -1,0 +1,30 @@
+flowchart LR
+    client([Adviser UI / client]) -->|HTTP JSON| api
+
+    subgraph host [Quotes.Api - composition root]
+        api[Controllers<br/>versioning · rate limiting<br/>ProblemDetails · OpenTelemetry]
+    end
+
+    subgraph app [Quotes.Application]
+        handlers[Command and query handlers<br/>validation · idempotency]
+        ports[[Ports: IPricingService<br/>IQuoteReadService · IIdempotencyStore]]
+    end
+
+    subgraph domain [Quotes.Domain]
+        quote[Quote aggregate root<br/>status rules · domain events]
+        pricing[PremiumCalculator]
+    end
+
+    subgraph infra [Quotes.Infrastructure]
+        ef[EF Core + Npgsql<br/>repositories · read projections<br/>unit of work → outbox]
+        outbox[Outbox dispatcher<br/>maintenance job]
+    end
+
+    api --> handlers
+    handlers --> quote
+    handlers --> pricing
+    handlers --> ports
+    ef -. implements .-> ports
+    ef --> db[(PostgreSQL)]
+    outbox --> db
+    outbox -->|publish| broker([Broker: log locally,<br/>EventBridge / SNS in AWS])

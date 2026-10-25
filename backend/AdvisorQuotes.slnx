@@ -1,0 +1,59 @@
+<Solution>
+  <Folder Name="/0. Tests/">
+    <Project Path="tests/Quotes.ArchitectureTests/Quotes.ArchitectureTests.csproj" />
+    <Project Path="tests/Quotes.IntegrationTests/Quotes.IntegrationTests.csproj" />
+    <Project Path="tests/Quotes.UnitTests/Quotes.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/1. Presentation/">
+    <Project Path="src/Quotes.Api/Quotes.Api.csproj" />
+  </Folder>
+  <Folder Name="/2. Infrastructure/">
+    <Project Path="src/Quotes.Infrastructure/Quotes.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/3. Application/">
+    <Project Path="src/Quotes.Application/Quotes.Application.csproj" />
+  </Folder>
+  <Folder Name="/4. Domain/">
+    <Project Path="src/Quotes.Domain/Quotes.Domain.csproj" />
+  </Folder>
+  <Folder Name="/5. Shared/">
+    <Project Path="src/dbQuotes/dbQuotes.shproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".dockerignore" />
+    <File Path="../.editorconfig" />
+    <File Path="../.gitattributes" />
+    <File Path="../.gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="dotnet-tools.json" />
+    <File Path="nuget.config" />
+    <File Path="README.md" />
+    <File Path="../README.md" />
+    <File Path="../SOLUTION.md" />
+  </Folder>
+  <Folder Name="/Solution Items/build/">
+    <File Path="../.env.example" />
+    <File Path="../.github/workflows/ci.yml" />
+    <File Path="build/docker/Dockerfile" />
+    <File Path="build/mermaid/generate-mermaid-png.ps1" />
+    <File Path="../docker-compose.yml" />
+    <File Path="scripts/migrate.ps1" />
+  </Folder>
+  <Folder Name="/Solution Items/docs/">
+    <File Path="docs/ai-usage.md" />
+    <File Path="docs/api.md" />
+    <File Path="docs/architecture.md" />
+    <File Path="docs/local-development.md" />
+    <File Path="docs/operations.md" />
+  </Folder>
+  <Folder Name="/Solution Items/docs/diagrams/">
+    <File Path="docs/diagrams/erd/advisor-quotes-erd.mermaid" />
+    <File Path="docs/diagrams/flow/aws-target-architecture.mermaid" />
+    <File Path="docs/diagrams/flow/create-quote.mermaid" />
+    <File Path="docs/diagrams/flow/outbox.mermaid" />
+    <File Path="docs/diagrams/flow/quote-lifecycle.mermaid" />
+    <File Path="docs/diagrams/flow/solution-architecture.mermaid" />
+    <File Path="docs/diagrams/flow/target-services.mermaid" />
+  </Folder>
+</Solution>

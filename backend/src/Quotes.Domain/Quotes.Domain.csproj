@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The core: Quote aggregate, statuses, transition rules and pricing. References nothing. -->
+</Project>

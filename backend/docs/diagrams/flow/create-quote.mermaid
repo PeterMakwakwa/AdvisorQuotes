@@ -1,0 +1,29 @@
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant API as QuotesController
+    participant H as CreateQuoteHandler
+    participant P as Pricing
+    participant DB as PostgreSQL
+    C->>API: POST /api/v1/quotes (Idempotency-Key: K, body B)
+    API->>H: CreateQuoteCommand
+    H->>H: validate shape, hash = SHA-256(normalise(B))
+    H->>DB: find idempotency key (adviser, K)
+    alt key seen, same hash
+        DB-->>H: original quote id
+        H-->>C: 201 original quote, Idempotent-Replayed: true
+    else key seen, different hash
+        H-->>C: 422 Idempotency.KeyReused
+    else new key
+        H->>P: price(client, product)
+        P-->>H: premium + factors, or a pricing error (400)
+        H->>DB: next Q-year-number from sequence
+        H->>H: Quote.Create (raises QuoteCreated)
+        H->>DB: one transaction: quote + history + idempotency key + outbox event
+        alt a concurrent identical request committed first
+            DB-->>H: unique violation on (adviser, K)
+            H-->>C: 201 the winner's quote, Idempotent-Replayed: true
+        else
+            H-->>C: 201 new quote + Location + X-Trace-Id
+        end
+    end

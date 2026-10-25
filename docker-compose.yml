@@ -1,0 +1,106 @@
+name: advisor-quotes
+
+# docker compose up --build                          PostgreSQL + migrations + API on http://localhost:8080 + UI on http://localhost:3000
+# docker compose --profile observability up --build  ... plus Jaeger on http://localhost:16686 (see .env.example)
+
+services:
+#=========================================================================
+# PostgreSQL
+# -----------------
+# Host: localhost:${POSTGRES_PORT}   Credentials: see .env
+#=========================================================================
+  postgres:
+    image: postgres:17.11-alpine
+    container_name: advisor-quotes-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+#=========================================================================
+# Database migrations (grate): runs each backend/src/dbQuotes/up/*.sql once, then exits
+#=========================================================================
+  db-migrations:
+    image: erikbra/grate:2.1.6
+    container_name: advisor-quotes-grate
+    entrypoint: [""]
+    command:
+      - ./grate
+      - --connstring=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - --databasetype=postgresql
+      - --sqlfilesdirectory=/db
+      - --environment=LOCAL
+      - --transaction
+      - --silent
+    volumes:
+      - ./backend/src/dbQuotes:/db
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+#=========================================================================
+# Advisor Quotes API
+# -----------------
+# API:      http://localhost:${API_PORT}/api/v1/quotes
+# Docs:     http://localhost:${API_PORT}/scalar
+# Health:   http://localhost:${API_PORT}/health/ready
+#=========================================================================
+  api:
+    build:
+      context: backend
+      dockerfile: build/docker/Dockerfile
+    container_name: advisor-quotes-api
+    environment:
+      ConnectionStrings__QuotesDb: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      OpenApi__Enabled: "true"
+      Telemetry__ConsoleExporter: ${TELEMETRY_CONSOLE_EXPORTER:-true}
+      Telemetry__ConsoleMetricsExporter: ${TELEMETRY_CONSOLE_METRICS_EXPORTER:-false}
+      Telemetry__MetricsExportIntervalSeconds: ${TELEMETRY_METRICS_EXPORT_INTERVAL_SECONDS:-15}
+      Logging__Format: ${LOG_FORMAT:-json}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      db-migrations:
+        condition: service_completed_successfully
+
+#=========================================================================
+# Advisor Quotes UI (React, served by nginx, which forwards /api to the API)
+# -----------------
+# UI:       http://localhost:${WEB_PORT}
+#=========================================================================
+  web:
+    build:
+      context: frontend
+    container_name: advisor-quotes-web
+    environment:
+      QUOTES_API_URL: http://api:8080
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      - api
+
+#=========================================================================
+# Jaeger (optional trace viewer, profile "observability")
+# -----------------
+# UI:   http://localhost:16686   OTLP: jaeger:4317 (gRPC)
+#=========================================================================
+  jaeger:
+    image: jaegertracing/jaeger:2.22.0
+    container_name: advisor-quotes-jaeger
+    profiles: ["observability"]
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+
+volumes:
+  postgres-data:
