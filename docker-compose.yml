@@ -62,6 +62,12 @@ services:
     environment:
       ConnectionStrings__QuotesDb: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       OpenApi__Enabled: "true"
+      # The UI's nginx proxies /api here, so the API must read the client address from X-Forwarded-For or every browser
+      # would share one rate limit (start-up fails otherwise). Trusted: the private ranges Docker allocates networks from.
+      ForwardedHeaders__Enabled: "true"
+      ForwardedHeaders__KnownNetworks__0: 172.16.0.0/12
+      ForwardedHeaders__KnownNetworks__1: 192.168.0.0/16
+      ForwardedHeaders__KnownNetworks__2: 10.0.0.0/8
       Telemetry__ConsoleExporter: ${TELEMETRY_CONSOLE_EXPORTER:-true}
       Telemetry__ConsoleMetricsExporter: ${TELEMETRY_CONSOLE_METRICS_EXPORTER:-false}
       Telemetry__MetricsExportIntervalSeconds: ${TELEMETRY_METRICS_EXPORT_INTERVAL_SECONDS:-15}

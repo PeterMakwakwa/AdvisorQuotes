@@ -83,7 +83,7 @@ namespace Quotes.UnitTests.Fakes
             {
                 Items = items,
                 PageSize = query.PageSize,
-                TotalCount = matches.Count,
+                TotalCount = cursor is null ? matches.Count : null,
                 NextCursor = last is null ? null : new QuoteListCursor { CreatedAt = last.CreatedAt, Id = last.Id }.Encode()
             };
 

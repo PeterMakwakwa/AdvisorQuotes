@@ -10,9 +10,10 @@ namespace Quotes.Application.Models.Response.V1
         public required int PageSize { get; init; }
 
         /// <summary>
-        /// How many items match the filters across all pages.
+        /// How many items match the filters across all pages. Only returned with the first page (no cursor); null on later
+        /// pages, so paging deeper never re-counts every match.
         /// </summary>
-        public required int TotalCount { get; init; }
+        public int? TotalCount { get; init; }
 
         public string? NextCursor { get; init; }
     }

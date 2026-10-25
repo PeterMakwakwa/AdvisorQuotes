@@ -9,6 +9,12 @@ namespace Quotes.Domain.Pricing
 
         public required string Currency { get; init; }
 
+        /// <summary>
+        /// The zone whose calendar date decides the client's age (South Africa for ZAR rates). A client whose birthday it
+        /// is there is priced at the new age, even while it is still the day before in UTC.
+        /// </summary>
+        public required TimeZoneInfo TimeZone { get; init; }
+
         public required decimal SmokerLoading { get; init; }
 
         public required IReadOnlyList<ProductRate> Products { get; init; }

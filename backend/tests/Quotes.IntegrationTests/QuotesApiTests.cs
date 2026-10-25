@@ -237,6 +237,7 @@ namespace Quotes.IntegrationTests
             page.NextCursor.ShouldNotBeNull();
             nextPage!.Items.ShouldHaveSingleItem().Id.ShouldBe(first.Id);
             nextPage.NextCursor.ShouldBeNull();
+            nextPage.TotalCount.ShouldBeNull();
             sent!.Items.ShouldHaveSingleItem().Id.ShouldBe(first.Id);
         }
 

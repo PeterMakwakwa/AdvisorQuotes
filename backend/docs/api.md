@@ -70,14 +70,16 @@ Content-Type: application/json
 | `adviserId` | required, up to 50 characters |
 | `adviserReference` | optional, up to 50; the adviser's own reference (not unique). `externalReference` is always issued by the service. |
 | `client.fullName` | required, up to 200 |
-| `client.dateOfBirth` | required, in the past; the age on the quote date must fall in a rated age band |
+| `client.dateOfBirth` | required, in the past; the age on the quote date (the calendar date in `Pricing:TimeZone`, South Africa by default) must fall in a rated age band |
 | `client.isSmoker` | required |
 | `product.productCode` | required; must be a product in the rate table (`TERM_LIFE`, `SERIOUS_ILLNESS`) |
 | `product.coverAmount` | required, > 0, at most 2 decimal places, within the product's cover range |
 | `product.termYears` | required, within the product's term range; age + term within the product's maximum age at expiry |
 | `notes` | optional, up to 2000 |
 
-**Duplicates:** the same `Idempotency-Key` and body within 24 hours, or the same body without a key within 10 minutes, return the original quote with `Idempotent-Replayed: true`. Spacing and letter-case differences don't count as a different body. The same key with a different body is `422 Idempotency.KeyReused`.
+**Duplicates:** the same `Idempotency-Key` and body within 24 hours, or the same body without a key within 10 minutes, return the original quote with `Idempotent-Replayed: true`. Spacing, letter-case and number-formatting differences (`1000000` vs `1000000.00`) don't count as a different body. The same key with a different body is `422 Idempotency.KeyReused`. A replay returns the quote as it is **now** (for example after a status change), not a snapshot of the first response.
+
+**References:** `externalReference` is `Q-<year captured>-<number>`. The number comes from one sequence for all years, so it is unique and increasing but does not restart in January, and may have gaps.
 
 ## Change status
 
@@ -89,6 +91,8 @@ Content-Type: application/json
 ```
 
 Returns the updated quote. Allowed moves: `Draft → SentToClient`, `Draft → Declined`, `SentToClient → Accepted`, `SentToClient → Declined`. `Accepted` and `Declined` are final; declining needs a `reason` (up to 500 characters). `changedBy` is required (up to 100).
+
+**Retries:** a status change has no idempotency key. If a retry follows a lost response, the quote already has the new status and the retry gets `409 Quote.StatusUnchanged`: treat that code as "already done" and `GET` the quote. `409 Quote.InvalidStatusTransition` is a real conflict.
 
 ## List quotes
 
@@ -103,7 +107,7 @@ GET /api/v1/quotes?adviserId=ADV-001&pageSize=20&cursor=<nextCursor from the pre
                "clientName": "Thandi Nkosi", "productCode": "TERM_LIFE", "coverAmount": 700000.00, "monthlyPremium": 210.00,
                "currency": "ZAR", "status": "Draft", "createdAt": "…", "updatedAt": "…" } ],
   "pageSize": 20,
-  "totalCount": 4,
+  "totalCount": 4,          // first page only; null on later pages
   "nextCursor": null
 }
 ```
@@ -116,7 +120,7 @@ The UI uses the client filters to warn an adviser, without blocking, before capt
 GET /api/v1/quotes?adviserId=ADV-001&clientName=Thandi%20Nkosi&clientDateOfBirth=1990-05-01&productCode=TERM_LIFE&openOnly=true&pageSize=5
 ```
 
-Paging: `pageSize` 1–100 (default 20). Paging is keyset-based: pass `nextCursor` back as `cursor`; it is `null` on the last page. Pages stay stable while new quotes arrive, and deep pages cost the same as the first. The cursor is opaque; an invalid one is a field error.
+Paging: `pageSize` 1–100 (default 20). Paging is keyset-based: pass `nextCursor` back as `cursor`; it is `null` on the last page. Pages stay stable while new quotes arrive, and deep pages cost the same as the first. `totalCount` is only returned with the first page (no `cursor`), so later pages never re-count every match. The cursor is opaque; an invalid one is a field error.
 
 ## Errors
 
@@ -156,3 +160,5 @@ A fixed window per client (by IP address, as there is no authentication) on the 
 ## Versioning
 
 URL-segment versioning (`/api/v1/...`) with Asp.Versioning. Responses report `api-supported-versions`; an unknown version returns 404. There is one OpenAPI document per version. A breaking change would ship as `v2` alongside `v1`.
+
+**Pre-release exception:** `totalCount` became nullable (first page only) inside `v1`. Clients that rely on it on every page would break, so after release this would be `v2`, or a new field alongside the old one. It changed in place only because `v1` has no external clients yet.

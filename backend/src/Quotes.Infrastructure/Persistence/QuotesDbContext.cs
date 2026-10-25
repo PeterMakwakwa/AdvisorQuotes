@@ -24,6 +24,11 @@ namespace Quotes.Infrastructure.Persistence
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(QuotesDbContext).Assembly);
+
+            modelBuilder.HasDbFunction(typeof(PostgresFunctions).GetMethod(nameof(PostgresFunctions.Upper))!)
+                .HasName("upper")
+                .IsBuiltIn()
+                .IsNullable(false);
         }
     }
 }

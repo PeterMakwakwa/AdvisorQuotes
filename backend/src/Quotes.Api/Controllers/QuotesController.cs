@@ -45,7 +45,8 @@ namespace Quotes.Api.Controllers
 
         /// <summary>
         /// Captures a quote and calculates its premium. Send an Idempotency-Key header to make retries safe; a repeat
-        /// returns the original quote with the header Idempotent-Replayed: true.
+        /// returns the original quote with the header Idempotent-Replayed: true. A replay shows the quote as it is now
+        /// (for example after a status change), not as it was when first created.
         /// </summary>
         [HttpPost]
         [ProducesResponseType<QuoteResponse>(StatusCodes.Status201Created)]
@@ -103,7 +104,9 @@ namespace Quotes.Api.Controllers
         }
 
         /// <summary>
-        /// Moves a quote to a new status and records the change in its history.
+        /// Moves a quote to a new status and records the change in its history. Not idempotent: if a retry follows a lost
+        /// response, the quote is already in the new status and the retry gets 409 with code Quote.StatusUnchanged.
+        /// Treat that code as "already done" and GET the quote; Quote.InvalidStatusTransition is a real conflict.
         /// </summary>
         [HttpPost("{quoteId:guid}/status-changes")]
         [ProducesResponseType<QuoteResponse>(StatusCodes.Status200OK)]

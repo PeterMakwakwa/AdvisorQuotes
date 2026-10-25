@@ -24,6 +24,11 @@ namespace Quotes.Infrastructure.Pricing
                 failures.Add(MessageFormatter.Format(ErrorMessages.PricingCurrencyInvalid, CurrencyCodeLength));
             }
 
+            if (string.IsNullOrWhiteSpace(options.TimeZone) || !TimeZoneInfo.TryFindSystemTimeZoneById(options.TimeZone, out _))
+            {
+                failures.Add(MessageFormatter.Format(ErrorMessages.PricingTimeZoneInvalid, options.TimeZone));
+            }
+
             if (options.SmokerLoading < 1)
             {
                 failures.Add(ErrorMessages.PricingSmokerLoadingTooLow);

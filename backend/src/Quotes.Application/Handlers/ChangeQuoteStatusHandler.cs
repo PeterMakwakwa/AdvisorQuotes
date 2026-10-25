@@ -4,6 +4,7 @@ using Quotes.Application.Abstractions;
 using Quotes.Application.Common;
 using Quotes.Application.Errors;
 using Quotes.Application.Exceptions;
+using Quotes.Application.Interfaces;
 using Quotes.Application.Models.Commands;
 using Quotes.Application.Models.Request.V1;
 using Quotes.Application.Models.Response.V1;

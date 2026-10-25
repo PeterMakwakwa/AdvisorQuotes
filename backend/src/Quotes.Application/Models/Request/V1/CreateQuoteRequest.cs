@@ -36,7 +36,7 @@ namespace Quotes.Application.Models.Request.V1
 
         /// <summary>
         /// The request in its canonical form, used for duplicate detection: text trimmed, the product code in upper case,
-        /// and blank optional fields treated as absent. Two submissions that create the same quote hash the same,
+        /// the cover amount at two decimal places, and blank optional fields treated as absent. Two submissions that create the same quote hash the same,
         /// so a retry with harmless differences (spacing, letter case) is replayed instead of rejected.
         /// </summary>
         public CreateQuoteRequest Normalize()
@@ -46,7 +46,11 @@ namespace Quotes.Application.Models.Request.V1
                 AdviserId = AdviserId.Trim(),
                 AdviserReference = NullIfBlank(AdviserReference),
                 Client = Client with { FullName = Client.FullName.Trim() },
-                Product = Product with { ProductCode = Product.ProductCode.Trim().ToUpperInvariant() },
+                Product = Product with
+                {
+                    ProductCode = Product.ProductCode.Trim().ToUpperInvariant(),
+                    CoverAmount = ToMoneyScale(Product.CoverAmount)
+                },
                 Notes = NullIfBlank(Notes)
             };
         }
@@ -64,6 +68,15 @@ namespace Quotes.Application.Models.Request.V1
                 PricingVersion = pricing.PricingVersion,
                 Notes = Notes
             };
+        }
+
+        /// <summary>
+        /// JSON keeps a decimal's scale, so 100000, 100000.0 and 100000.00 would otherwise hash differently. Two decimal
+        /// places, like the stored column, gives every equal amount the same form.
+        /// </summary>
+        private static decimal ToMoneyScale(decimal amount)
+        {
+            return decimal.Round(amount, 2, MidpointRounding.AwayFromZero) + 0.00m;
         }
 
         private static string? NullIfBlank(string? value)

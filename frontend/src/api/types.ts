@@ -79,6 +79,7 @@ export interface QuoteSummary {
 export interface PagedResponse<TItem> {
   items: TItem[];
   pageSize: number;
-  totalCount: number;
+  /** Only on the first page (no cursor); null on later pages. */
+  totalCount: number | null;
   nextCursor: string | null;
 }

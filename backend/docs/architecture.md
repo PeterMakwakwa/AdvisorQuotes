@@ -33,16 +33,18 @@ src/Quotes.Domain/
   ValueObjects/    ClientDetails, ProductDetails, Money
   Rules/           QuoteStatusTransitions (the state machine table)
   Pricing/         PremiumCalculator, RateTable, ProductRate, FactorBand
-  Errors/          QuoteErrors, PricingErrors (stable codes)
-  Repositories/    IQuoteRepository, IUnitOfWork
+  Errors/          QuoteErrors, PricingErrors, ErrorCodes (stable codes)
+  Repositories/    IQuoteRepository (persistence of the aggregate)
   Common/          AggregateRoot, IDomainEvent, Result, Error
+  Observability/   Messages: ResponseMessages, ErrorMessages, WarningMessages, InfoMessages, AuditMessages, MessageFormatter
 
 src/Quotes.Application/
   Handlers/        CreateQuote, ChangeQuoteStatus (commands) · GetQuote, ListQuotes (queries)
   Models/          Request/V1 (HTTP binding), Commands, Queries, Response/V1, Results
   Validators/      FluentValidation, one per request
   Idempotency/     IIdempotencyGuard + IdempotencyGuard, IdempotencyCheck, IdempotencyRecord, options, RequestHasher
-  Interfaces/      IPricingService, IQuoteReadService, IIdempotencyStore, IRateTableProvider, IQuoteReferenceGenerator
+  Interfaces/      IUnitOfWork (one transaction per use case), IPricingService, IQuoteReadService, IIdempotencyStore,
+                   IRateTableProvider, IQuoteReferenceGenerator
   Pricing/         LocalPricingService (in-process implementation of IPricingService)
   Observability/   Instrumented… decorators (spans, metrics, logs), QuotesTelemetry, QuotesMetrics, ApplicationLog
 
@@ -51,6 +53,7 @@ src/Quotes.Infrastructure/
   Messaging/       outbox: OutboxMessage, IntegrationEvents, OutboxDispatcher (+ background service), backlog, health check
   Maintenance/     DatabaseMaintenance (+ background service)
   Pricing/         PricingOptions (+ validator), ConfigurationRateTableProvider
+  Constants/       ConnectionStringNames, HealthCheckNames, HealthCheckTags, HealthCheckDataKeys
 
 src/Quotes.Api/
   Controllers/     QuotesController, ApiControllerBase (Result → problem details)
@@ -71,9 +74,9 @@ src/dbQuotes/up/   0001 … 0008: the schema, applied by grate
 
 1. The controller binds the body and the optional `Idempotency-Key` header into a `CreateQuoteCommand`. It calls the registered handler, which is `InstrumentedCreateQuoteHandler` (span, metrics, logs) wrapping `CreateQuoteHandler` (the use case).
 2. The handler validates the request shape (field-level 400s).
-3. `IIdempotencyGuard.CheckAsync` hashes the normalised request (trimmed text, upper-case product code, blank optional fields absent) and looks up `(adviser, key)`, or `(adviser, body fingerprint)` without a key. Its decision: go ahead, replay the earlier quote, or reject (key too long, or `422` for the same key with a different body).
+3. `IIdempotencyGuard.CheckAsync` hashes the normalised request (trimmed text, upper-case product code, cover amount at two decimal places, blank optional fields absent) and looks up `(adviser, key)`, or `(adviser, body fingerprint)` without a key. Its decision: go ahead, replay the earlier quote, or reject (key too long, or `422` for the same key with a different body).
 4. Otherwise the handler prices the quote through `IPricingService` (product limits are domain rules, returned as 400), takes the next `Q-<year>-<number>` from a sequence, and calls `Quote.Create`, which checks invariants, records the first history entry and raises `QuoteCreated`.
-5. `IIdempotencyGuard.Remember` stages the key, and the unit of work saves the quote, its history, the idempotency record and the outbox message in **one transaction**. If a concurrent identical request committed first, the primary key on `idempotency_keys` rejects ours, and `RecheckAfterConflictAsync` turns that into a replay of the winner's quote.
+5. `IIdempotencyGuard.Remember` stages the key, and the unit of work saves the quote, its history, the idempotency record and the outbox message in **one transaction**. If a concurrent identical request committed first, the primary key on `idempotency_keys` rejects ours, and `RecheckAfterConflictAsync` turns that into a replay of the winner's quote. The save runs through EF's retrying execution strategy with a **commit check**: if the connection drops during the commit itself, the unit of work looks for the save's outbox row before retrying, so a transaction that did commit is never written a second time.
 
 ## Changing a status
 
@@ -109,6 +112,8 @@ Reflection tests enforce every point above.
 - **Versioned contracts:** `quotes.quote-created.v1`, `quotes.quote-status-changed.v1`. The payload is JSON with string enums; the row id is the event id, so consumers can de-duplicate (delivery is at least once).
 - **Claim with lease:** a dispatcher claims a batch with one statement, `UPDATE … SET locked_until, lock_token WHERE id IN (SELECT … FOR UPDATE SKIP LOCKED) RETURNING *`, which commits immediately. It then publishes **outside any transaction**, so a slow broker never holds a lock. Each outcome is saved on its own with `… AND lock_token = ours`.
 - **Safe with many instances:** `SKIP LOCKED` hands each message to one dispatcher. A dispatcher that dies leaves its lease to expire, after which any instance reclaims the message; if the old dispatcher wakes up, the `lock_token` check rejects its late result.
+- **In order per quote:** each message carries its `aggregate_id`, and the claim skips a message while an earlier one for the same quote is unpublished, so a consumer never sees `quote-status-changed` before `quote-created`. Messages for different quotes don't wait for each other. A dead-lettered message holds back the later events of its quote until it is re-driven.
+- **Database clock:** leases and retry times are on PostgreSQL's clock (read once per batch), so instances with skewed clocks still agree on when a lease expires.
 - **Exponential backoff** on failure (5 s → 5 min, 20 attempts). A message that runs out of attempts is kept for investigation and reported by the outbox health check and the `quotes.outbox.dead_lettered` gauge.
 - **The trace continues:** the request's W3C trace context is stored with the message, so the publish span sits inside the original request's trace.
 - **Locally, the broker is the log** (`LoggingIntegrationEventPublisher`); in AWS an EventBridge or SNS publisher replaces it behind `IIntegrationEventPublisher`.

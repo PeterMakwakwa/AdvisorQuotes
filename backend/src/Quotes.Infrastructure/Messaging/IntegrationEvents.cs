@@ -20,17 +20,17 @@ namespace Quotes.Infrastructure.Messaging
 
         internal static OutboxMessage ToOutboxMessage(IDomainEvent domainEvent, string? traceParent)
         {
-            string eventType = domainEvent switch
+            (string eventType, Guid aggregateId) = domainEvent switch
             {
-                QuoteCreated => QuoteCreatedType,
-                QuoteStatusChanged => QuoteStatusChangedType,
+                QuoteCreated created => (QuoteCreatedType, created.QuoteId),
+                QuoteStatusChanged changed => (QuoteStatusChangedType, changed.QuoteId),
                 _ => throw new InvalidOperationException(
                     MessageFormatter.Format(ErrorMessages.IntegrationEventNotRegistered, domainEvent.GetType().Name))
             };
 
             string payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), PayloadOptions);
 
-            return OutboxMessage.Create(domainEvent.EventId, eventType, payload, domainEvent.OccurredAt, traceParent);
+            return OutboxMessage.Create(domainEvent.EventId, aggregateId, eventType, payload, domainEvent.OccurredAt, traceParent);
         }
 
         private static JsonSerializerOptions CreatePayloadOptions()

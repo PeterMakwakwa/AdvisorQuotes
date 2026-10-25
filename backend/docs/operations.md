@@ -12,11 +12,11 @@ Standard .NET configuration: `appsettings.json` → `appsettings.{Environment}.j
 |---|---|---|
 | Connection string | `ConnectionStrings__QuotesDb` | local value in `appsettings.Development.json` only |
 | Database retries | `Database__MaxRetryCount`, `Database__MaxRetryDelay` | `3`, `00:00:05` |
-| Rate limit | `RateLimiting__PermitLimit`, `RateLimiting__Window` | `100`, `00:01:00` |
+| Rate limit | `RateLimiting__PermitLimit`, `RateLimiting__Window`, `RateLimiting__RequireForwardedHeaders` | `100`, `00:01:00`, `true` |
 | Forwarded headers | `ForwardedHeaders__Enabled`, `__KnownProxies__0`, `__KnownNetworks__0`, `__ForwardLimit` | `false`, none, none, `1` |
 | Log format | `Logging__Format` (`text` or `json`) | text in Development, JSON elsewhere |
 | Idempotency | `Idempotency__KeyLifetime`, `Idempotency__FingerprintWindow` | `1.00:00:00`, `00:10:00` |
-| Rate table | `Pricing__*` | see `appsettings.json` |
+| Rate table | `Pricing__*` (including `Pricing__TimeZone`, the zone whose date decides a client's age) | see `appsettings.json` (`Africa/Johannesburg`) |
 | Outbox | `Outbox__Enabled`, `__PollingInterval`, `__BatchSize`, `__MaxAttempts`, `__LeaseDuration`, `__InitialRetryDelay`, `__MaxRetryDelay`, `__BacklogAgeWarning` | `true`, `2 s`, `50`, `20`, `1 min`, `5 s`, `5 min`, `5 min` |
 | Maintenance | `Maintenance__Enabled`, `__Interval`, `__ExpiredIdempotencyKeyRetention`, `__ProcessedOutboxRetention`, `__DeleteBatchSize` | `true`, `1 h`, `1 day`, `7 days`, `5000` |
 | Traces | `OTEL_EXPORTER_OTLP_ENDPOINT`, `Telemetry__ConsoleExporter` | unset, `true` |
@@ -85,6 +85,8 @@ WHERE processed_at IS NULL AND attempts > 0
 ORDER BY occurred_at;
 ```
 
+Messages are published **in order per quote**, so a dead-lettered message also holds back that quote's later events; they show as pending and age the backlog until it is re-driven.
+
 **Re-drive** messages after fixing the cause (for example a broker permission): reset their attempts, and the dispatcher publishes them on its next run.
 
 ```sql
@@ -113,6 +115,8 @@ Fixed window per client IP on the quote endpoints. Rejections are logged (event 
 ForwardedHeaders__Enabled=true
 ForwardedHeaders__KnownNetworks__0=10.0.0.0/16     # the VPC range the ALB sits in
 ```
+
+Outside Development, **start-up fails** while forwarded headers are disabled (`RateLimiting:RequireForwardedHeaders`, default `true`), so a deployment can't silently put every client in one bucket. Set it to `false` only when clients connect to the API directly. Docker compose enables forwarded headers and trusts Docker's private ranges, because the UI's nginx proxies `/api`. That is a local convenience only: port 8080 is also published to the host, so a direct caller could send its own `X-Forwarded-For` and dodge the limit. In AWS, trust only the load balancer's subnets.
 
 Only listed proxies and networks (plus loopback) are trusted; trusting `X-Forwarded-For` from anyone would let a client pick its own IP and dodge the limit. Invalid addresses stop start-up. The integration tests prove both cases: disabled, clients behind one proxy share a limit; enabled, each forwarded client has its own.
 

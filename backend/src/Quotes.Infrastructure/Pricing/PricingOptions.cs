@@ -13,6 +13,11 @@ namespace Quotes.Infrastructure.Pricing
 
         public string Currency { get; set; } = string.Empty;
 
+        /// <summary>
+        /// IANA time zone id (for example "Africa/Johannesburg") whose calendar date is used to work out a client's age.
+        /// </summary>
+        public string TimeZone { get; set; } = string.Empty;
+
         public decimal SmokerLoading { get; set; }
 
         public List<ProductRateOptions> Products { get; set; } = [];
@@ -27,6 +32,7 @@ namespace Quotes.Infrastructure.Pricing
             {
                 Version = Version,
                 Currency = Currency,
+                TimeZone = TimeZoneInfo.FindSystemTimeZoneById(TimeZone),
                 SmokerLoading = SmokerLoading,
                 Products = Products.Select(product => product.ToProductRate()).ToList(),
                 AgeBands = AgeBands.Select(band => band.ToFactorBand()).ToList(),

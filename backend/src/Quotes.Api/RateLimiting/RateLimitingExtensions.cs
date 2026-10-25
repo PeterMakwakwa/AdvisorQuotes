@@ -23,6 +23,7 @@ namespace Quotes.Api.RateLimiting
                 .BindConfiguration(RateLimitingOptions.SectionName)
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+            services.AddSingleton<IValidateOptions<RateLimitingOptions>, RateLimitingOptionsValidator>();
 
             services.AddRateLimiter(limiter =>
             {

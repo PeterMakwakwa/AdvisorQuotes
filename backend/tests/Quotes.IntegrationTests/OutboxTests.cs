@@ -130,6 +130,43 @@ namespace Quotes.IntegrationTests
         }
 
         [Fact]
+        public async Task MessagesForOneQuote_ArePublishedInOrder_WhileAnEarlierOneIsRetrying()
+        {
+            await _factory.DrainOutboxAsync();
+            QuoteResponse quote = await CreateQuoteAsync();
+            QuoteResponse otherQuote = await CreateQuoteAsync();
+            (await ApiRequests.PostStatusAsync(_client, quote.Id, QuoteStatus.SentToClient, "Emailed")).StatusCode.ShouldBe(HttpStatusCode.OK);
+            List<OutboxRow> rows = await _factory.GetOutboxRowsAsync(quote.Id);
+            Guid createdId = rows[0].Id;
+            Guid statusChangedId = rows[1].Id;
+            Guid otherCreatedId = (await _factory.GetOutboxRowsAsync(otherQuote.Id)).Single().Id;
+
+            // Only the quote's QuoteCreated fails (its payload carries its own event id).
+            _factory.Publisher.FailWhenPayloadContains(createdId.ToString());
+
+            try
+            {
+                await DispatchOnceAsync();
+                await DispatchOnceAsync();
+
+                // The status change waits behind the failing creation; other quotes are not held up.
+                _factory.Publisher.Published.ShouldNotContain(message => message.Id == statusChangedId);
+                _factory.Publisher.Published.ShouldContain(message => message.Id == otherCreatedId);
+                (await _factory.GetOutboxRowsAsync(quote.Id))[1].Attempts.ShouldBe(0);
+            }
+            finally
+            {
+                _factory.Publisher.FailWhenPayloadContains(null);
+            }
+
+            await _factory.DrainOutboxAsync();
+
+            List<Guid> publishedOrder = _factory.Publisher.Published.Select(message => message.Id).ToList();
+            publishedOrder.IndexOf(createdId).ShouldBeLessThan(publishedOrder.IndexOf(statusChangedId));
+            (await _factory.GetOutboxRowsAsync(quote.Id)).ShouldAllBe(row => row.ProcessedAt != null);
+        }
+
+        [Fact]
         public async Task Dispatchers_RunningInParallel_PublishEachMessageExactlyOnce()
         {
             await _factory.DrainOutboxAsync();

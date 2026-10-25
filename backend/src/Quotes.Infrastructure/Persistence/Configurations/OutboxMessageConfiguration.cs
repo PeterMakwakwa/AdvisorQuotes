@@ -5,7 +5,8 @@ using Quotes.Infrastructure.Messaging;
 namespace Quotes.Infrastructure.Persistence.Configurations
 {
     /// <summary>
-    /// Maps src/dbQuotes/up/0007_create_outbox_messages.sql and 0008_add_lease_to_outbox_messages.sql.
+    /// Maps src/dbQuotes/up/0007_create_outbox_messages.sql, 0008_add_lease_to_outbox_messages.sql and
+    /// 0009_add_aggregate_id_to_outbox_messages.sql.
     /// </summary>
     internal sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<OutboxMessage>
     {
@@ -24,6 +25,9 @@ namespace Quotes.Infrastructure.Persistence.Configurations
             builder.Property(message => message.Id)
                 .HasColumnName("id")
                 .ValueGeneratedNever();
+
+            builder.Property(message => message.AggregateId)
+                .HasColumnName("aggregate_id");
 
             builder.Property(message => message.EventType)
                 .HasColumnName("event_type")

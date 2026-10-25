@@ -60,12 +60,14 @@ namespace Quotes.IntegrationTests
 
         [Theory]
         [InlineData("Pricing:SmokerLoading", "0.5", "SmokerLoading")]
+        [InlineData("Pricing:TimeZone", "Mars/Olympus_Mons", "Pricing:TimeZone")]
         [InlineData("Pricing:AgeBands:1:From", "25", "overlap")]
         [InlineData("Idempotency:KeyLifetime", "00:00:01", "KeyLifetime")]
         [InlineData("RateLimiting:PermitLimit", "0", "PermitLimit")]
         [InlineData("Outbox:BatchSize", "0", "BatchSize")]
         [InlineData("Maintenance:DeleteBatchSize", "0", "DeleteBatchSize")]
         [InlineData("ForwardedHeaders:KnownNetworks:0", "not-a-network", "KnownNetworks")]
+        [InlineData("RateLimiting:RequireForwardedHeaders", "true", "ForwardedHeaders:Enabled must be true")]
         public void InvalidSetting_StopsStartup(string key, string value, string expectedInMessage)
         {
             using WebApplicationFactory<Program> misconfigured = _factory.WithWebHostBuilder(builder => builder.UseSetting(key, value));

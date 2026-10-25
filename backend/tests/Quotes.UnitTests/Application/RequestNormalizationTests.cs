@@ -1,3 +1,4 @@
+using System.Globalization;
 using Quotes.Application.Idempotency;
 using Quotes.Application.Models.Request.V1;
 using Quotes.UnitTests.TestData;
@@ -37,6 +38,24 @@ namespace Quotes.UnitTests.Application
             };
 
             RequestHasher.Compute(equivalent.Normalize()).ShouldBe(RequestHasher.Compute(original.Normalize()));
+        }
+
+        [Theory]
+        [InlineData("1000000")]
+        [InlineData("1000000.0")]
+        [InlineData("1000000.000")]
+        public void Hash_IsTheSame_WhateverScaleTheCoverAmountIsWrittenWith(string coverAmount)
+        {
+            CreateQuoteRequest original = TestRequests.CreateQuote() with
+            {
+                Product = TestRequests.CreateQuote().Product with { CoverAmount = 1_000_000.00m }
+            };
+            CreateQuoteRequest rescaled = original with
+            {
+                Product = original.Product with { CoverAmount = decimal.Parse(coverAmount, CultureInfo.InvariantCulture) }
+            };
+
+            RequestHasher.Compute(rescaled.Normalize()).ShouldBe(RequestHasher.Compute(original.Normalize()));
         }
 
         [Fact]

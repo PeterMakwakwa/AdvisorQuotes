@@ -69,6 +69,7 @@ namespace Quotes.UnitTests.Application
             first.Value.NextCursor.ShouldNotBeNull();
             second.Value.Items.ShouldHaveSingleItem().ExternalReference.ShouldBe("Q-2026-000002");
             second.Value.NextCursor.ShouldBeNull();
+            second.Value.TotalCount.ShouldBeNull();
         }
 
         [Fact]

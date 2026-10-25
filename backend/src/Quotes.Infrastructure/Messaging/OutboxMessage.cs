@@ -15,6 +15,11 @@ namespace Quotes.Infrastructure.Messaging
 
         public Guid Id { get; private init; }
 
+        /// <summary>
+        /// The aggregate (quote) that raised the event. Messages for one aggregate are published in the order they occurred.
+        /// </summary>
+        public Guid AggregateId { get; private init; }
+
         public string EventType { get; private init; } = string.Empty;
 
         public string Payload { get; private init; } = string.Empty;
@@ -47,11 +52,18 @@ namespace Quotes.Infrastructure.Messaging
         /// </summary>
         public Guid? LockToken { get; private set; }
 
-        internal static OutboxMessage Create(Guid id, string eventType, string payload, DateTimeOffset occurredAt, string? traceParent)
+        internal static OutboxMessage Create(
+            Guid id,
+            Guid aggregateId,
+            string eventType,
+            string payload,
+            DateTimeOffset occurredAt,
+            string? traceParent)
         {
             return new OutboxMessage
             {
                 Id = id,
+                AggregateId = aggregateId,
                 EventType = eventType,
                 Payload = payload,
                 OccurredAt = occurredAt,

@@ -14,8 +14,6 @@ namespace Quotes.Infrastructure.Persistence
     /// </summary>
     internal sealed class QuoteReadService : IQuoteReadService
     {
-        private const string LikeEscapeCharacter = "\\";
-
         private readonly QuotesDbContext _dbContext;
 
         public QuoteReadService(QuotesDbContext dbContext)
@@ -104,10 +102,11 @@ namespace Quotes.Infrastructure.Persistence
 
             if (!string.IsNullOrWhiteSpace(query.ClientName))
             {
-                // Names are stored trimmed. ILIKE makes the match case-insensitive; the LIKE wildcards in the name are
-                // escaped so it stays an exact match.
-                string clientName = EscapeLikePattern(query.ClientName.Trim());
-                quotes = quotes.Where(quote => EF.Functions.ILike(quote.Client.FullName, clientName, LikeEscapeCharacter));
+                // Names are stored trimmed. upper(client_name) = upper(@search) is an exact match ignoring case, answered
+                // by the ix_quotes_upper_client_name_date_of_birth expression index. PostgreSQL upper-cases both sides,
+                // so the stored name and the search follow the same case rules.
+                string clientName = query.ClientName.Trim();
+                quotes = quotes.Where(quote => PostgresFunctions.Upper(quote.Client.FullName) == PostgresFunctions.Upper(clientName));
             }
 
             if (query.ClientDateOfBirth is not null)
@@ -128,9 +127,12 @@ namespace Quotes.Infrastructure.Persistence
                 quotes = quotes.Where(quote => openStatuses.Contains(quote.Status));
             }
 
-            int totalCount = await quotes.CountAsync(cancellationToken);
+            // The total only comes with the first page: counting every match again for each later page would make deep
+            // paging as expensive as the count itself.
+            bool isFirstPage = !QuoteListCursor.TryDecode(query.Cursor, out QuoteListCursor? cursor);
+            int? totalCount = isFirstPage ? await quotes.CountAsync(cancellationToken) : null;
 
-            if (QuoteListCursor.TryDecode(query.Cursor, out QuoteListCursor? cursor))
+            if (!isFirstPage)
             {
                 // Keyset paging: everything after the last quote of the previous page, as the row comparison
                 // (created_at, id) < (cursor.CreatedAt, cursor.Id), which the (created_at DESC, id DESC) index answers directly.
@@ -172,14 +174,6 @@ namespace Quotes.Infrastructure.Persistence
                 TotalCount = totalCount,
                 NextCursor = last is null ? null : new QuoteListCursor { CreatedAt = last.CreatedAt, Id = last.Id }.Encode()
             };
-        }
-
-        private static string EscapeLikePattern(string value)
-        {
-            return value
-                .Replace(LikeEscapeCharacter, LikeEscapeCharacter + LikeEscapeCharacter, StringComparison.Ordinal)
-                .Replace("%", LikeEscapeCharacter + "%", StringComparison.Ordinal)
-                .Replace("_", LikeEscapeCharacter + "_", StringComparison.Ordinal);
         }
     }
 }

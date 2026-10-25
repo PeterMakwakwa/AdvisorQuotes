@@ -31,7 +31,7 @@ namespace Quotes.Application.Pricing
             activity?.SetTag(QuotesTelemetry.TagNames.ProductCode, product.ProductCode);
 
             RateTable rates = await _rateTableProvider.GetCurrentAsync(cancellationToken);
-            DateOnly asOf = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+            DateOnly asOf = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_timeProvider.GetUtcNow(), rates.TimeZone).DateTime);
 
             Result<PremiumCalculation> result = PremiumCalculator.Calculate(client, product, rates, asOf);
 

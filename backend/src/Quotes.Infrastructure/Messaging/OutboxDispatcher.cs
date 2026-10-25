@@ -15,6 +15,15 @@ namespace Quotes.Infrastructure.Messaging
     /// </list>
     /// Several instances can dispatch at once; a dispatcher that dies leaves its messages to be reclaimed when the lease
     /// expires. Failed messages back off exponentially. Delivery is at least once.
+    /// <para>
+    /// Messages for one aggregate are published in order: a message waits while an earlier one for the same quote is
+    /// unpublished (failing, leased or dead-lettered), so a status change never overtakes the quote's creation. A
+    /// dead-lettered message therefore holds back the rest of its quote's events until an operator re-drives it.
+    /// </para>
+    /// <para>
+    /// Lease and retry times are on the database clock (read once per batch, then advanced by elapsed time), so
+    /// instances whose clocks disagree still agree on when a lease expires or a retry is due.
+    /// </para>
     /// </summary>
     public sealed class OutboxDispatcher
     {
@@ -54,12 +63,13 @@ namespace Quotes.Infrastructure.Messaging
         {
             _dbContext.ChangeTracker.Clear();
 
-            List<OutboxMessage> claimed = await ClaimBatchAsync(cancellationToken);
+            DatabaseClock clock = await ReadDatabaseClockAsync(cancellationToken);
+            List<OutboxMessage> claimed = await ClaimBatchAsync(clock, cancellationToken);
             int published = 0;
 
             foreach (OutboxMessage message in claimed)
             {
-                bool succeeded = await PublishAsync(message, cancellationToken);
+                bool succeeded = await PublishAsync(message, clock, cancellationToken);
 
                 if (await TryRecordOutcomeAsync(message) && succeeded)
                 {
@@ -71,13 +81,13 @@ namespace Quotes.Infrastructure.Messaging
         }
 
         /// <summary>
-        /// One atomic statement: picks the oldest messages that are due and not leased by anyone else, skipping rows another
-        /// dispatcher is claiming right now, and stamps them with this dispatcher's lease. It commits on its own, so the
-        /// row locks last only for this statement.
+        /// One atomic statement: picks the oldest messages that are due, not leased by anyone else and not waiting behind an
+        /// earlier unpublished message for the same aggregate, skipping rows another dispatcher is claiming right now, and
+        /// stamps them with this dispatcher's lease. It commits on its own, so the row locks last only for this statement.
         /// </summary>
-        private async Task<List<OutboxMessage>> ClaimBatchAsync(CancellationToken cancellationToken)
+        private async Task<List<OutboxMessage>> ClaimBatchAsync(DatabaseClock clock, CancellationToken cancellationToken)
         {
-            DateTimeOffset now = _timeProvider.GetUtcNow();
+            DateTimeOffset now = clock.Now();
             DateTimeOffset lockedUntil = now + _options.LeaseDuration;
             Guid lockToken = Guid.NewGuid();
 
@@ -86,12 +96,17 @@ namespace Quotes.Infrastructure.Messaging
                     UPDATE outbox_messages
                     SET locked_until = {lockedUntil}, lock_token = {lockToken}
                     WHERE id IN (
-                        SELECT id FROM outbox_messages
-                        WHERE processed_at IS NULL
-                          AND attempts < {_options.MaxAttempts}
-                          AND (next_attempt_at IS NULL OR next_attempt_at <= {now})
-                          AND (locked_until IS NULL OR locked_until <= {now})
-                        ORDER BY occurred_at, id
+                        SELECT candidate.id FROM outbox_messages candidate
+                        WHERE candidate.processed_at IS NULL
+                          AND candidate.attempts < {_options.MaxAttempts}
+                          AND (candidate.next_attempt_at IS NULL OR candidate.next_attempt_at <= {now})
+                          AND (candidate.locked_until IS NULL OR candidate.locked_until <= {now})
+                          AND NOT EXISTS (
+                              SELECT 1 FROM outbox_messages earlier
+                              WHERE earlier.aggregate_id = candidate.aggregate_id
+                                AND earlier.processed_at IS NULL
+                                AND (earlier.occurred_at, earlier.id) < (candidate.occurred_at, candidate.id))
+                        ORDER BY candidate.occurred_at, candidate.id
                         LIMIT {_options.BatchSize}
                         FOR UPDATE SKIP LOCKED)
                     RETURNING *
@@ -102,7 +117,16 @@ namespace Quotes.Infrastructure.Messaging
             return claimed.OrderBy(message => message.OccurredAt).ThenBy(message => message.Id).ToList();
         }
 
-        private async Task<bool> PublishAsync(OutboxMessage message, CancellationToken cancellationToken)
+        private async Task<DatabaseClock> ReadDatabaseClockAsync(CancellationToken cancellationToken)
+        {
+            DateTimeOffset databaseNow = await _dbContext.Database
+                .SqlQuery<DateTimeOffset>($"SELECT now() AS \"Value\"")
+                .SingleAsync(cancellationToken);
+
+            return new DatabaseClock(databaseNow, _timeProvider);
+        }
+
+        private async Task<bool> PublishAsync(OutboxMessage message, DatabaseClock clock, CancellationToken cancellationToken)
         {
             // Continue the trace of the request that raised the event, so the publish shows up in that request's trace.
             ActivityContext.TryParse(message.TraceParent, null, out ActivityContext parent);
@@ -121,7 +145,7 @@ namespace Quotes.Infrastructure.Messaging
             {
                 await _publisher.PublishAsync(message, cancellationToken);
 
-                DateTimeOffset publishedAt = _timeProvider.GetUtcNow();
+                DateTimeOffset publishedAt = clock.Now();
                 message.MarkPublished(publishedAt);
                 _telemetry.Published(message.EventType, publishedAt - message.OccurredAt);
 
@@ -130,7 +154,7 @@ namespace Quotes.Infrastructure.Messaging
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 TimeSpan delay = OutboxRetryPolicy.DelayAfter(message.Attempts + 1, _options.InitialRetryDelay, _options.MaxRetryDelay);
-                message.RecordFailure(exception.Message, _timeProvider.GetUtcNow() + delay);
+                message.RecordFailure(exception.Message, clock.Now() + delay);
                 _telemetry.Failed(message.EventType);
                 activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
 
@@ -169,6 +193,30 @@ namespace Quotes.Infrastructure.Messaging
 
                 return false;
             }
+        }
+    }
+
+    /// <summary>
+    /// The database's time when the batch started, moved forward by the time elapsed on this machine's monotonic clock.
+    /// </summary>
+    internal sealed class DatabaseClock
+    {
+        private readonly DateTimeOffset _startedAt;
+
+        private readonly long _startTimestamp;
+
+        private readonly TimeProvider _timeProvider;
+
+        public DatabaseClock(DateTimeOffset databaseNow, TimeProvider timeProvider)
+        {
+            _startedAt = databaseNow;
+            _startTimestamp = timeProvider.GetTimestamp();
+            _timeProvider = timeProvider;
+        }
+
+        public DateTimeOffset Now()
+        {
+            return _startedAt + _timeProvider.GetElapsedTime(_startTimestamp);
         }
     }
 

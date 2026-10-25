@@ -10,6 +10,7 @@ namespace Quotes.UnitTests.TestData
         {
             Version = "2026.1",
             Currency = "ZAR",
+            TimeZone = TimeZoneInfo.Utc,
             SmokerLoading = 1.50m,
             Products =
             [

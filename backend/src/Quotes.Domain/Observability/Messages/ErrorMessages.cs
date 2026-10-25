@@ -12,6 +12,8 @@ namespace Quotes.Domain.Observability.Messages
 
         public const string DuplicateIdempotencyKey = "The idempotency key was saved by another request.";
 
+        public const string DatabaseFunctionOnly = "This method only runs inside a database query.";
+
         public const string IntegrationEventNotRegistered = "No integration event type is registered for {0}.";
 
         public const string ConnectionStringMissing = "Connection string '{0}' is not configured. Set ConnectionStrings__{0}.";
@@ -22,9 +24,16 @@ namespace Quotes.Domain.Observability.Messages
 
         public const string ForwardLimitOutOfRange = "ForwardedHeaders:ForwardLimit must be between {0} and {1}.";
 
+        public const string ForwardedHeadersRequiredForRateLimiting =
+            "ForwardedHeaders:Enabled must be true outside Development: behind a proxy every client would share one rate limit. "
+            + "Set RateLimiting:RequireForwardedHeaders to false only if clients connect to the API directly.";
+
         public const string PricingVersionRequired = "Pricing:Version is required.";
 
         public const string PricingCurrencyInvalid = "Pricing:Currency must be a {0}-letter ISO code.";
+
+        public const string PricingTimeZoneInvalid =
+            "Pricing:TimeZone '{0}' is not a known time zone. Use an IANA id such as Africa/Johannesburg.";
 
         public const string PricingSmokerLoadingTooLow = "Pricing:SmokerLoading must be at least 1.";
 

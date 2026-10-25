@@ -165,6 +165,9 @@ namespace Quotes.IntegrationTests.Infrastructure
             // ApiPlatformTests lowers it on purpose.
             builder.UseSetting("RateLimiting:PermitLimit", "100000");
 
+            // The test server has no proxy in front of it; HostBehaviourTests covers the start-up check itself.
+            builder.UseSetting("RateLimiting:RequireForwardedHeaders", "false");
+
             // The tests run the dispatcher and maintenance themselves, and retry failed messages straight away.
             builder.UseSetting("Outbox:Enabled", "false");
             builder.UseSetting("Outbox:InitialRetryDelay", "00:00:00");

@@ -1,4 +1,4 @@
-namespace Quotes.Domain.Repositories
+namespace Quotes.Application.Interfaces
 {
     /// <summary>
     /// Commits every pending change (quotes, status history, idempotency records) in one database transaction.

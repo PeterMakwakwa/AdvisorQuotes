@@ -3,8 +3,9 @@ using System.ComponentModel.DataAnnotations;
 namespace Quotes.Infrastructure.Persistence
 {
     /// <summary>
-    /// Retry of transient database failures (dropped connections, failover, too many connections). Safe for creates
-    /// because the idempotency key turns a retried insert into a replay, never a second quote.
+    /// Retry of transient database failures (dropped connections, failover, too many connections). A save is retried
+    /// as a whole transaction; if the commit itself fails, the unit of work first checks whether it committed, so a
+    /// retry never writes the same change twice. A client that retries after an error is protected by its idempotency key.
     /// </summary>
     public sealed class DatabaseOptions
     {

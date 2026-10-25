@@ -276,7 +276,7 @@ namespace Quotes.UnitTests.Application
                     _store.IdempotencyRecords.Add(IdempotencyRecord.Create(
                         TestRequests.AdviserId,
                         IdempotencyKey,
-                        RequestHasher.Compute(request),
+                        RequestHasher.Compute(request.Normalize()),
                         winner.Id,
                         _time.GetUtcNow(),
                         TimeSpan.FromHours(24)));
