@@ -1,47 +1,54 @@
 using Quotes.Domain.Common;
 using Quotes.Domain.Enums;
+using Quotes.Domain.Observability.Messages;
 
 namespace Quotes.Domain.Errors
 {
     public static class QuoteErrors
     {
         public static readonly Error AdviserRequired =
-            Error.Validation("Quote.AdviserRequired", "An adviser identifier is required.");
+            Error.Validation(ErrorCodes.QuoteAdviserRequired, ResponseMessages.AdviserRequired);
 
         public static readonly Error ClientNameRequired =
-            Error.Validation("Quote.ClientNameRequired", "The client's full name is required.");
+            Error.Validation(ErrorCodes.QuoteClientNameRequired, ResponseMessages.ClientNameRequired);
 
         public static readonly Error DateOfBirthNotInPast =
-            Error.Validation("Quote.DateOfBirthNotInPast", "The client's date of birth must be in the past.");
+            Error.Validation(ErrorCodes.QuoteDateOfBirthNotInPast, ResponseMessages.ClientDateOfBirthNotInPast);
 
         public static readonly Error CoverAmountNotPositive =
-            Error.Validation("Quote.CoverAmountNotPositive", "The cover amount must be greater than zero.");
+            Error.Validation(ErrorCodes.QuoteCoverAmountNotPositive, ResponseMessages.CoverAmountNotPositive);
 
         public static readonly Error TermNotPositive =
-            Error.Validation("Quote.TermNotPositive", "The term must be at least one year.");
+            Error.Validation(ErrorCodes.QuoteTermNotPositive, ResponseMessages.TermNotPositive);
 
         public static readonly Error PremiumNegative =
-            Error.Validation("Quote.PremiumNegative", "The premium cannot be negative.");
+            Error.Validation(ErrorCodes.QuotePremiumNegative, ResponseMessages.PremiumNegative);
 
         public static readonly Error ChangedByRequired =
-            Error.Validation("Quote.ChangedByRequired", "The person changing the status is required.");
+            Error.Validation(ErrorCodes.QuoteChangedByRequired, ResponseMessages.ChangedByRequired);
 
         public static readonly Error DeclineReasonRequired =
-            Error.Validation("Quote.DeclineReasonRequired", "A reason is required when a quote is declined.");
+            Error.Validation(ErrorCodes.QuoteDeclineReasonRequired, ResponseMessages.DeclineReasonRequired);
 
         public static Error StatusUnchanged(QuoteStatus status)
         {
-            return Error.Conflict("Quote.StatusUnchanged", $"The quote is already {status}.");
+            return Error.Conflict(
+                ErrorCodes.QuoteStatusUnchanged,
+                MessageFormatter.Format(ResponseMessages.StatusUnchanged, status));
         }
 
         public static Error InvalidStatusTransition(QuoteStatus from, QuoteStatus to)
         {
-            return Error.Conflict("Quote.InvalidStatusTransition", $"A quote cannot move from {from} to {to}.");
+            return Error.Conflict(
+                ErrorCodes.QuoteInvalidStatusTransition,
+                MessageFormatter.Format(ResponseMessages.InvalidStatusTransition, from, to));
         }
 
         public static Error NotFound(Guid id)
         {
-            return Error.NotFound("Quote.NotFound", $"Quote '{id}' was not found.");
+            return Error.NotFound(
+                ErrorCodes.QuoteNotFound,
+                MessageFormatter.Format(ResponseMessages.QuoteNotFound, id));
         }
     }
 }

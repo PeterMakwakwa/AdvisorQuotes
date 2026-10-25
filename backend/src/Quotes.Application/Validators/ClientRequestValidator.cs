@@ -1,6 +1,7 @@
 using FluentValidation;
 using Quotes.Application.Constants;
 using Quotes.Application.Models.Request.V1;
+using Quotes.Domain.Observability.Messages;
 
 namespace Quotes.Application.Validators
 {
@@ -16,9 +17,9 @@ namespace Quotes.Application.Validators
 
             RuleFor(client => client.DateOfBirth)
                 .Must(dateOfBirth => dateOfBirth < DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime))
-                .WithMessage("Date of birth must be in the past.")
+                .WithMessage(ResponseMessages.DateOfBirthNotInPast)
                 .GreaterThan(EarliestDateOfBirth)
-                .WithMessage("Date of birth is not valid.");
+                .WithMessage(ResponseMessages.DateOfBirthInvalid);
         }
     }
 }

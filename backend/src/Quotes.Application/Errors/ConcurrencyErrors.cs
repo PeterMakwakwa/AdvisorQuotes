@@ -1,4 +1,6 @@
 using Quotes.Domain.Common;
+using Quotes.Domain.Errors;
+using Quotes.Domain.Observability.Messages;
 
 namespace Quotes.Application.Errors
 {
@@ -7,8 +9,8 @@ namespace Quotes.Application.Errors
         public static Error QuoteModified(Guid quoteId)
         {
             return Error.Conflict(
-                "Quote.ConcurrentUpdate",
-                $"Quote '{quoteId}' was changed by another request. Reload it and try again.");
+                ErrorCodes.QuoteConcurrentUpdate,
+                MessageFormatter.Format(ResponseMessages.QuoteConcurrentUpdate, quoteId));
         }
     }
 }

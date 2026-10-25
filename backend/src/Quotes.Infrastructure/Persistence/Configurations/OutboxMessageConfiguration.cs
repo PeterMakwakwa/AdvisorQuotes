@@ -31,7 +31,7 @@ namespace Quotes.Infrastructure.Persistence.Configurations
 
             builder.Property(message => message.Payload)
                 .HasColumnName("payload")
-                .HasColumnType("jsonb");
+                .HasColumnType(ColumnTypes.Json);
 
             builder.Property(message => message.OccurredAt)
                 .HasColumnName("occurred_at");

@@ -1,4 +1,5 @@
 using Prometheus;
+using Quotes.Api.Constants;
 
 namespace Quotes.Api.Extensions
 {
@@ -8,8 +9,6 @@ namespace Quotes.Api.Extensions
     /// </summary>
     public static class PrometheusExtensions
     {
-        public const string MetricsPath = "/metrics";
-
         /// <summary>
         /// prometheus-net's built-in meter listener only starts on the first scrape, so anything recorded before it would be
         /// lost. It is replaced by one started with the application (once per process).
@@ -25,7 +24,7 @@ namespace Quotes.Api.Extensions
         {
             _ = MeterListener.Value;
 
-            endpoints.MapMetrics(MetricsPath);
+            endpoints.MapMetrics(EndpointPaths.Metrics);
 
             return endpoints;
         }

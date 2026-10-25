@@ -1,6 +1,7 @@
-using System.Globalization;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Quotes.Domain.Observability.Messages;
+using Quotes.Infrastructure.Constants;
 
 namespace Quotes.Infrastructure.Messaging
 {
@@ -31,27 +32,27 @@ namespace Quotes.Infrastructure.Messaging
 
             Dictionary<string, object> data = new Dictionary<string, object>
             {
-                ["pending"] = backlog.Pending,
-                ["deadLettered"] = backlog.DeadLettered,
-                ["oldestPendingAgeSeconds"] = Math.Round(backlog.OldestPendingAge.TotalSeconds, 1)
+                [HealthCheckDataKeys.Pending] = backlog.Pending,
+                [HealthCheckDataKeys.DeadLettered] = backlog.DeadLettered,
+                [HealthCheckDataKeys.OldestPendingAgeSeconds] = Math.Round(backlog.OldestPendingAge.TotalSeconds, 1)
             };
 
             if (backlog.DeadLettered > 0)
             {
                 return HealthCheckResult.Degraded(
-                    string.Create(CultureInfo.InvariantCulture, $"{backlog.DeadLettered} outbox message(s) gave up after {_options.MaxAttempts} attempts."),
+                    MessageFormatter.Format(WarningMessages.OutboxDeadLettered, backlog.DeadLettered, _options.MaxAttempts),
                     data: data);
             }
 
             if (backlog.OldestPendingAge > _options.BacklogAgeWarning)
             {
                 return HealthCheckResult.Degraded(
-                    string.Create(CultureInfo.InvariantCulture, $"The oldest pending outbox message has waited {backlog.OldestPendingAge.TotalSeconds:N0} s."),
+                    MessageFormatter.Format(WarningMessages.OutboxBacklogAged, backlog.OldestPendingAge.TotalSeconds),
                     data: data);
             }
 
             return HealthCheckResult.Healthy(
-                string.Create(CultureInfo.InvariantCulture, $"{backlog.Pending} outbox message(s) pending."),
+                MessageFormatter.Format(InfoMessages.OutboxPending, backlog.Pending),
                 data);
         }
     }

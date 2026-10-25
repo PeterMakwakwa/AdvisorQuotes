@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Quotes.Domain.Observability.Messages;
 
 namespace Quotes.Infrastructure.Pricing
 {
@@ -15,27 +16,27 @@ namespace Quotes.Infrastructure.Pricing
 
             if (string.IsNullOrWhiteSpace(options.Version))
             {
-                failures.Add("Pricing:Version is required.");
+                failures.Add(ErrorMessages.PricingVersionRequired);
             }
 
             if (options.Currency.Length != CurrencyCodeLength)
             {
-                failures.Add("Pricing:Currency must be a 3-letter ISO code.");
+                failures.Add(MessageFormatter.Format(ErrorMessages.PricingCurrencyInvalid, CurrencyCodeLength));
             }
 
             if (options.SmokerLoading < 1)
             {
-                failures.Add("Pricing:SmokerLoading must be at least 1.");
+                failures.Add(ErrorMessages.PricingSmokerLoadingTooLow);
             }
 
             if (options.Products.Count == 0)
             {
-                failures.Add("Pricing:Products must contain at least one product.");
+                failures.Add(ErrorMessages.PricingProductsEmpty);
             }
 
             if (options.Products.GroupBy(product => product.ProductCode, StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
             {
-                failures.Add("Pricing:Products contains duplicate product codes.");
+                failures.Add(ErrorMessages.PricingProductsDuplicated);
             }
 
             foreach (ProductRateOptions product in options.Products)
@@ -43,39 +44,37 @@ namespace Quotes.Infrastructure.Pricing
                 ValidateProduct(product, failures);
             }
 
-            ValidateBands("AgeBands", options.AgeBands, failures);
-            ValidateBands("TermBands", options.TermBands, failures);
+            ValidateBands(nameof(PricingOptions.AgeBands), options.AgeBands, failures);
+            ValidateBands(nameof(PricingOptions.TermBands), options.TermBands, failures);
 
             return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
         }
 
         private static void ValidateProduct(ProductRateOptions product, List<string> failures)
         {
-            string label = $"Pricing:Products[{product.ProductCode}]";
-
             if (string.IsNullOrWhiteSpace(product.ProductCode))
             {
-                failures.Add("Pricing:Products has a product without a ProductCode.");
+                failures.Add(ErrorMessages.PricingProductCodeMissing);
             }
 
             if (product.MonthlyRatePerThousand <= 0)
             {
-                failures.Add($"{label}: MonthlyRatePerThousand must be greater than zero.");
+                failures.Add(MessageFormatter.Format(ErrorMessages.PricingProductRateNotPositive, product.ProductCode));
             }
 
             if (product.MinCoverAmount <= 0 || product.MinCoverAmount > product.MaxCoverAmount)
             {
-                failures.Add($"{label}: cover limits must be positive with Min <= Max.");
+                failures.Add(MessageFormatter.Format(ErrorMessages.PricingProductCoverLimitsInvalid, product.ProductCode));
             }
 
             if (product.MinTermYears <= 0 || product.MinTermYears > product.MaxTermYears)
             {
-                failures.Add($"{label}: term limits must be positive with Min <= Max.");
+                failures.Add(MessageFormatter.Format(ErrorMessages.PricingProductTermLimitsInvalid, product.ProductCode));
             }
 
             if (product.MaxAgeAtExpiry <= 0)
             {
-                failures.Add($"{label}: MaxAgeAtExpiry must be greater than zero.");
+                failures.Add(MessageFormatter.Format(ErrorMessages.PricingProductMaxAgeAtExpiryNotPositive, product.ProductCode));
             }
         }
 
@@ -83,7 +82,7 @@ namespace Quotes.Infrastructure.Pricing
         {
             if (bands.Count == 0)
             {
-                failures.Add($"Pricing:{sectionName} must contain at least one band.");
+                failures.Add(MessageFormatter.Format(ErrorMessages.PricingBandsEmpty, sectionName));
 
                 return;
             }
@@ -96,12 +95,13 @@ namespace Quotes.Infrastructure.Pricing
 
                 if (band.From > band.To || band.Factor <= 0)
                 {
-                    failures.Add($"Pricing:{sectionName} band {band.From}-{band.To} must have From <= To and a positive Factor.");
+                    failures.Add(MessageFormatter.Format(ErrorMessages.PricingBandInvalid, sectionName, band.From, band.To));
                 }
 
                 if (index > 0 && band.From <= ordered[index - 1].To)
                 {
-                    failures.Add($"Pricing:{sectionName} bands {ordered[index - 1].From}-{ordered[index - 1].To} and {band.From}-{band.To} overlap.");
+                    failures.Add(MessageFormatter.Format(
+                        ErrorMessages.PricingBandsOverlap, sectionName, ordered[index - 1].From, ordered[index - 1].To, band.From, band.To));
                 }
             }
         }

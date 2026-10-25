@@ -16,8 +16,6 @@ namespace Quotes.Infrastructure.Persistence.Configurations
         /// </summary>
         public const string PrimaryKeyName = "pk_idempotency_keys";
 
-        private const string RowVersionProperty = "RowVersion";
-
         private const int RequestHashLength = 64;
 
         public void Configure(EntityTypeBuilder<IdempotencyRecord> builder)
@@ -36,7 +34,7 @@ namespace Quotes.Infrastructure.Persistence.Configurations
 
             builder.Property(record => record.RequestHash)
                 .HasColumnName("request_hash")
-                .HasColumnType("char(64)")
+                .HasColumnType(ColumnTypes.Sha256Hex)
                 .HasMaxLength(RequestHashLength);
 
             builder.Property(record => record.QuoteId)
@@ -48,8 +46,8 @@ namespace Quotes.Infrastructure.Persistence.Configurations
             builder.Property(record => record.ExpiresAt)
                 .HasColumnName("expires_at");
 
-            builder.Property<uint>(RowVersionProperty)
-                .HasColumnName("xmin")
+            builder.Property<uint>(ColumnTypes.RowVersionProperty)
+                .HasColumnName(ColumnTypes.RowVersionColumn)
                 .IsRowVersion();
 
             // The relationship makes EF insert the quote before the record that points at it.

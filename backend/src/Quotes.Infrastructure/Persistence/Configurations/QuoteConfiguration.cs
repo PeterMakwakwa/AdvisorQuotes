@@ -11,11 +11,6 @@ namespace Quotes.Infrastructure.Persistence.Configurations
     /// </summary>
     internal sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
     {
-        /// <summary>
-        /// Shadow property mapped to PostgreSQL's xmin system column: optimistic concurrency without a column on the entity.
-        /// </summary>
-        public const string RowVersionProperty = "RowVersion";
-
         private const int StatusLength = 20;
 
         private const int ExternalReferenceLength = 30;
@@ -84,7 +79,7 @@ namespace Quotes.Infrastructure.Persistence.Configurations
 
                 premium.Property(money => money.Currency)
                     .HasColumnName("currency")
-                    .HasColumnType("char(3)");
+                    .HasColumnType(ColumnTypes.CurrencyCode);
             });
 
             builder.Property(quote => quote.PricingVersion)
@@ -106,8 +101,8 @@ namespace Quotes.Infrastructure.Persistence.Configurations
             builder.Property(quote => quote.UpdatedAt)
                 .HasColumnName("updated_at");
 
-            builder.Property<uint>(RowVersionProperty)
-                .HasColumnName("xmin")
+            builder.Property<uint>(ColumnTypes.RowVersionProperty)
+                .HasColumnName(ColumnTypes.RowVersionColumn)
                 .IsRowVersion();
 
             builder.HasMany(quote => quote.StatusHistory)

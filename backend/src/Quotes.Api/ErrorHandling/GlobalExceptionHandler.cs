@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Quotes.Api.Logging;
+using Quotes.Domain.Observability.Messages;
 
 namespace Quotes.Api.ErrorHandling
 {
@@ -10,8 +11,6 @@ namespace Quotes.Api.ErrorHandling
     /// </summary>
     internal sealed class GlobalExceptionHandler : IExceptionHandler
     {
-        private const string UnexpectedErrorTitle = "An unexpected error occurred.";
-
         private readonly IProblemDetailsService _problemDetailsService;
 
         private readonly ILogger<GlobalExceptionHandler> _logger;
@@ -35,7 +34,7 @@ namespace Quotes.Api.ErrorHandling
                 ProblemDetails = new ProblemDetails
                 {
                     Status = StatusCodes.Status500InternalServerError,
-                    Title = UnexpectedErrorTitle
+                    Title = ResponseMessages.UnexpectedError
                 }
             });
         }

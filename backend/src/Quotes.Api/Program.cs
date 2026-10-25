@@ -6,6 +6,7 @@ using Quotes.Api.Networking;
 using Quotes.Api.RateLimiting;
 using Quotes.Application.Extensions;
 using Quotes.Application.Idempotency;
+using Quotes.Domain.Observability.Messages;
 using Quotes.Infrastructure.Extensions;
 using Serilog;
 
@@ -57,7 +58,7 @@ try
 }
 catch (Exception exception) when (exception is not HostAbortedException)
 {
-    Log.Fatal(exception, "Advisor Quotes API terminated unexpectedly");
+    Log.Fatal(exception, ErrorMessages.ApiTerminatedUnexpectedly);
 
     throw;
 }

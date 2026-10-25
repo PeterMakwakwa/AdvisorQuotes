@@ -3,7 +3,10 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
+using Quotes.Api.Constants;
 using Quotes.Api.Logging;
+using Quotes.Domain.Errors;
+using Quotes.Domain.Observability.Messages;
 
 namespace Quotes.Api.RateLimiting
 {
@@ -14,14 +17,6 @@ namespace Quotes.Api.RateLimiting
     /// </summary>
     public static class RateLimitingExtensions
     {
-        public const string QuotesPolicy = "quotes";
-
-        private const string RateLimitExceededCode = "RateLimit.Exceeded";
-
-        private const string ErrorCodeExtension = "code";
-
-        private const string UnknownClient = "unknown";
-
         public static IServiceCollection AddQuotesRateLimiting(this IServiceCollection services)
         {
             services.AddOptions<RateLimitingOptions>()
@@ -33,12 +28,12 @@ namespace Quotes.Api.RateLimiting
             {
                 limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-                limiter.AddPolicy(QuotesPolicy, context =>
+                limiter.AddPolicy(RateLimitingPolicies.Quotes, context =>
                 {
                     RateLimitingOptions options = context.RequestServices.GetRequiredService<IOptions<RateLimitingOptions>>().Value;
 
                     return RateLimitPartition.GetFixedWindowLimiter(
-                        context.Connection.RemoteIpAddress?.ToString() ?? UnknownClient,
+                        context.Connection.RemoteIpAddress?.ToString() ?? RateLimitingPolicies.UnknownClient,
                         _ => new FixedWindowRateLimiterOptions
                         {
                             PermitLimit = options.PermitLimit,
@@ -70,10 +65,10 @@ namespace Quotes.Api.RateLimiting
             ProblemDetails problem = new ProblemDetails
             {
                 Status = StatusCodes.Status429TooManyRequests,
-                Title = "Too Many Requests",
-                Detail = $"Too many requests. Try again in {Math.Ceiling(retryAfter.TotalSeconds)} seconds."
+                Title = ResponseMessages.TooManyRequestsTitle,
+                Detail = MessageFormatter.Format(ResponseMessages.TooManyRequests, Math.Ceiling(retryAfter.TotalSeconds))
             };
-            problem.Extensions[ErrorCodeExtension] = RateLimitExceededCode;
+            problem.Extensions[ProblemDetailsKeys.ErrorCode] = ErrorCodes.RateLimitExceeded;
 
             await httpContext.RequestServices.GetRequiredService<IProblemDetailsService>().WriteAsync(new ProblemDetailsContext
             {

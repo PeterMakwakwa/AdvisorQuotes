@@ -1,3 +1,5 @@
+using Quotes.Domain.Observability.Messages;
+
 namespace Quotes.Domain.Common
 {
     public class Result
@@ -42,7 +44,7 @@ namespace Quotes.Domain.Common
 
         public T Value => IsSuccess
             ? _value!
-            : throw new InvalidOperationException("Cannot read the value of a failed result.");
+            : throw new InvalidOperationException(ErrorMessages.FailedResultValue);
 
         // A value or an Error converts implicitly, so callers write "return quote;" or "return QuoteErrors.NotFound(id);".
         public static implicit operator Result<T>(T value)

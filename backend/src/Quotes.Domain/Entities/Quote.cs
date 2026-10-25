@@ -3,6 +3,7 @@ using Quotes.Domain.Common;
 using Quotes.Domain.Enums;
 using Quotes.Domain.Errors;
 using Quotes.Domain.Events;
+using Quotes.Domain.Observability.Messages;
 using Quotes.Domain.Rules;
 using Quotes.Domain.ValueObjects;
 
@@ -10,8 +11,6 @@ namespace Quotes.Domain.Entities
 {
     public sealed class Quote : AggregateRoot
     {
-        private const string CreatedReason = "Quote created";
-
         private readonly List<StatusChange> _statusHistory = [];
 
         private Quote()
@@ -97,7 +96,7 @@ namespace Quotes.Domain.Entities
             };
 
             quote._statusHistory.Add(
-                new StatusChange(quote.Id, null, QuoteStatus.Draft, CreatedReason, quote.AdviserId, now));
+                new StatusChange(quote.Id, null, QuoteStatus.Draft, AuditMessages.QuoteCreatedReason, quote.AdviserId, now));
 
             quote.Raise(new QuoteCreated
             {

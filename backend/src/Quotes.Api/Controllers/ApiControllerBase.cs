@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.WebUtilities;
+using Quotes.Api.Constants;
 using Quotes.Domain.Common;
 
 namespace Quotes.Api.Controllers
@@ -8,10 +9,6 @@ namespace Quotes.Api.Controllers
     [ApiController]
     public abstract class ApiControllerBase : ControllerBase
     {
-        private const string ProblemJsonContentType = "application/problem+json";
-
-        private const string ErrorCodeExtension = "code";
-
         /// <summary>
         /// Turns an Error into an RFC 9457 problem response. The error type decides the status code, and the stable
         /// error code is added as a "code" extension so clients can act on it.
@@ -39,10 +36,10 @@ namespace Quotes.Api.Controllers
                     statusCode: statusCode,
                     detail: error.Message);
 
-            problem.Extensions[ErrorCodeExtension] = error.Code;
+            problem.Extensions[ProblemDetailsKeys.ErrorCode] = error.Code;
 
             ObjectResult result = new ObjectResult(problem) { StatusCode = statusCode };
-            result.ContentTypes.Add(ProblemJsonContentType);
+            result.ContentTypes.Add(MediaTypes.ProblemJson);
 
             return result;
         }

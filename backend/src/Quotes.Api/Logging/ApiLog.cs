@@ -1,3 +1,5 @@
+using Quotes.Domain.Observability.Messages;
+
 namespace Quotes.Api.Logging
 {
     /// <summary>
@@ -5,10 +7,10 @@ namespace Quotes.Api.Logging
     /// </summary>
     internal static partial class ApiLog
     {
-        [LoggerMessage(EventId = 4001, Level = LogLevel.Error, Message = "Unhandled exception for {Method} {Path}")]
+        [LoggerMessage(EventId = 4001, Level = LogLevel.Error, Message = ErrorMessages.UnhandledException)]
         public static partial void UnhandledException(this ILogger logger, Exception exception, string method, string path);
 
-        [LoggerMessage(EventId = 4002, Level = LogLevel.Warning, Message = "Rate limit exceeded for {Client} on {Method} {Path}")]
+        [LoggerMessage(EventId = 4002, Level = LogLevel.Warning, Message = WarningMessages.RateLimitExceeded)]
         public static partial void RateLimitExceeded(this ILogger logger, string? client, string method, string path);
     }
 }

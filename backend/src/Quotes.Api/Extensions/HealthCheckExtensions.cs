@@ -1,17 +1,12 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Quotes.Infrastructure.Extensions;
+using Quotes.Api.Constants;
+using Quotes.Infrastructure.Constants;
 
 namespace Quotes.Api.Extensions
 {
     public static class HealthCheckExtensions
     {
-        private const string HealthPath = "/health";
-
-        private const string LivePath = "/health/live";
-
-        private const string ReadyPath = "/health/ready";
-
         /// <summary>
         /// /health/live: the process is running (no dependencies checked).
         /// /health/ready: the database is reachable and migrated, so the instance can take traffic.
@@ -19,19 +14,19 @@ namespace Quotes.Api.Extensions
         /// </summary>
         public static IEndpointRouteBuilder MapQuotesHealthChecks(this IEndpointRouteBuilder endpoints)
         {
-            endpoints.MapHealthChecks(LivePath, new HealthCheckOptions
+            endpoints.MapHealthChecks(EndpointPaths.HealthLive, new HealthCheckOptions
             {
                 Predicate = _ => false,
                 ResponseWriter = WriteResponseAsync
             });
 
-            endpoints.MapHealthChecks(ReadyPath, new HealthCheckOptions
+            endpoints.MapHealthChecks(EndpointPaths.HealthReady, new HealthCheckOptions
             {
-                Predicate = check => check.Tags.Contains(ServiceCollectionExtensions.ReadinessTag),
+                Predicate = check => check.Tags.Contains(HealthCheckTags.Readiness),
                 ResponseWriter = WriteResponseAsync
             });
 
-            endpoints.MapHealthChecks(HealthPath, new HealthCheckOptions
+            endpoints.MapHealthChecks(EndpointPaths.Health, new HealthCheckOptions
             {
                 ResponseWriter = WriteResponseAsync
             });

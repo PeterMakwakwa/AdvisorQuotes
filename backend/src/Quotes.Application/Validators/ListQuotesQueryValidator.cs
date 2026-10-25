@@ -1,6 +1,7 @@
 using FluentValidation;
 using Quotes.Application.Constants;
 using Quotes.Application.Models.Queries;
+using Quotes.Domain.Observability.Messages;
 
 namespace Quotes.Application.Validators
 {
@@ -26,7 +27,7 @@ namespace Quotes.Application.Validators
             RuleFor(query => query.Cursor)
                 .Must(cursor => QuoteListCursor.TryDecode(cursor, out _))
                 .When(query => query.Cursor is not null)
-                .WithMessage("The cursor is not valid. Use the nextCursor value from the previous page.");
+                .WithMessage(ResponseMessages.CursorInvalid);
 
             RuleFor(query => query.PageSize)
                 .InclusiveBetween(1, ListQuotesQuery.MaxPageSize);

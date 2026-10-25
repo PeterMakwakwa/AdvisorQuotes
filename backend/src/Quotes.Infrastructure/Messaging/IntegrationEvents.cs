@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Quotes.Domain.Common;
 using Quotes.Domain.Events;
+using Quotes.Domain.Observability.Messages;
 
 namespace Quotes.Infrastructure.Messaging
 {
@@ -23,7 +24,8 @@ namespace Quotes.Infrastructure.Messaging
             {
                 QuoteCreated => QuoteCreatedType,
                 QuoteStatusChanged => QuoteStatusChangedType,
-                _ => throw new InvalidOperationException($"No integration event type is registered for {domainEvent.GetType().Name}.")
+                _ => throw new InvalidOperationException(
+                    MessageFormatter.Format(ErrorMessages.IntegrationEventNotRegistered, domainEvent.GetType().Name))
             };
 
             string payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), PayloadOptions);

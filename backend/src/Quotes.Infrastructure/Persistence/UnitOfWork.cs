@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Quotes.Application.Exceptions;
 using Quotes.Domain.Common;
+using Quotes.Domain.Observability.Messages;
 using Quotes.Domain.Repositories;
 using Quotes.Infrastructure.Messaging;
 using Quotes.Infrastructure.Persistence.Configurations;
@@ -36,13 +37,13 @@ namespace Quotes.Infrastructure.Persistence
                 // Forget the failed changes so the caller can re-read current data on this same context.
                 _dbContext.ChangeTracker.Clear();
 
-                throw new ConcurrencyConflictException("The row was changed by another request.", exception);
+                throw new ConcurrencyConflictException(ErrorMessages.ConcurrencyConflict, exception);
             }
             catch (DbUpdateException exception) when (IsDuplicateIdempotencyKey(exception))
             {
                 _dbContext.ChangeTracker.Clear();
 
-                throw new DuplicateIdempotencyKeyException("The idempotency key was saved by another request.", exception);
+                throw new DuplicateIdempotencyKeyException(ErrorMessages.DuplicateIdempotencyKey, exception);
             }
 
             foreach (AggregateRoot aggregate in aggregates)

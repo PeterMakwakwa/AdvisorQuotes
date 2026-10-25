@@ -16,39 +16,19 @@ namespace Quotes.Api.Extensions
     /// </summary>
     public static class TelemetryExtensions
     {
-        private const string ServiceNameKey = "Telemetry:ServiceName";
-
-        private const string ConsoleExporterKey = "Telemetry:ConsoleExporter";
-
-        private const string ConsoleMetricsExporterKey = "Telemetry:ConsoleMetricsExporter";
-
-        private const string OtlpMetricsKey = "Telemetry:OtlpMetrics";
-
-        private const string MetricsExportIntervalKey = "Telemetry:MetricsExportIntervalSeconds";
-
-        private const string OtlpEndpointKey = "OTEL_EXPORTER_OTLP_ENDPOINT";
-
-        private const string DefaultServiceName = "advisor-quotes-api";
-
-        private const string RuntimeMeterName = "System.Runtime";
-
-        private const string RateLimitingMeterName = "Microsoft.AspNetCore.RateLimiting";
-
-        private const string HealthPath = "/health";
-
         private const int DefaultMetricsExportIntervalSeconds = 15;
 
         private const int MillisecondsPerSecond = 1000;
 
         public static IServiceCollection AddQuotesTelemetry(this IServiceCollection services, IConfiguration configuration)
         {
-            string serviceName = configuration[ServiceNameKey] ?? DefaultServiceName;
-            bool useConsoleExporter = configuration.GetValue(ConsoleExporterKey, defaultValue: true);
-            bool useOtlpExporter = !string.IsNullOrWhiteSpace(configuration[OtlpEndpointKey]);
-            bool useConsoleMetricsExporter = configuration.GetValue(ConsoleMetricsExporterKey, defaultValue: false);
-            bool useOtlpMetrics = useOtlpExporter && configuration.GetValue(OtlpMetricsKey, defaultValue: false);
+            string serviceName = configuration[ConfigurationKeys.TelemetryServiceName] ?? TelemetryNames.DefaultServiceName;
+            bool useConsoleExporter = configuration.GetValue(ConfigurationKeys.TelemetryConsoleExporter, defaultValue: true);
+            bool useOtlpExporter = !string.IsNullOrWhiteSpace(configuration[ConfigurationKeys.OtlpEndpoint]);
+            bool useConsoleMetricsExporter = configuration.GetValue(ConfigurationKeys.TelemetryConsoleMetricsExporter, defaultValue: false);
+            bool useOtlpMetrics = useOtlpExporter && configuration.GetValue(ConfigurationKeys.TelemetryOtlpMetrics, defaultValue: false);
             int metricsExportIntervalMs = MillisecondsPerSecond
-                * configuration.GetValue(MetricsExportIntervalKey, DefaultMetricsExportIntervalSeconds);
+                * configuration.GetValue(ConfigurationKeys.TelemetryMetricsExportInterval, DefaultMetricsExportIntervalSeconds);
 
             services.AddOpenTelemetry()
                 .ConfigureResource(resource => resource.AddService(serviceName))
@@ -59,8 +39,8 @@ namespace Quotes.Api.Extensions
                         .AddSource(MessagingTelemetry.SourceName)
                         .AddAspNetCoreInstrumentation(options =>
                         {
-                            options.Filter = context => !context.Request.Path.StartsWithSegments(HealthPath)
-                                && !context.Request.Path.StartsWithSegments(PrometheusExtensions.MetricsPath);
+                            options.Filter = context => !context.Request.Path.StartsWithSegments(EndpointPaths.Health)
+                                && !context.Request.Path.StartsWithSegments(EndpointPaths.Metrics);
                             options.RecordException = true;
                         })
                         .AddNpgsql();
@@ -84,8 +64,8 @@ namespace Quotes.Api.Extensions
                         .AddMeter(QuotesMetrics.MeterName)
                         .AddMeter(MessagingTelemetry.SourceName)
                         .AddAspNetCoreInstrumentation()
-                        .AddMeter(RateLimitingMeterName)
-                        .AddMeter(RuntimeMeterName);
+                        .AddMeter(TelemetryNames.RateLimitingMeter)
+                        .AddMeter(TelemetryNames.RuntimeMeter);
 
                     // Metrics go over OTLP only when asked: Jaeger accepts traces but not metrics, whereas an
                     // OpenTelemetry collector (ADOT in AWS) accepts both.

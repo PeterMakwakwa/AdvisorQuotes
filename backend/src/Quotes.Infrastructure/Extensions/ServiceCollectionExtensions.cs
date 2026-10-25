@@ -5,7 +5,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Quotes.Application.Interfaces;
+using Quotes.Domain.Observability.Messages;
 using Quotes.Domain.Repositories;
+using Quotes.Infrastructure.Constants;
 using Quotes.Infrastructure.Maintenance;
 using Quotes.Infrastructure.Messaging;
 using Quotes.Infrastructure.Persistence;
@@ -16,20 +18,6 @@ namespace Quotes.Infrastructure.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        /// <summary>
-        /// The connection string name. Locally it comes from appsettings.Development.json; elsewhere set the
-        /// environment variable ConnectionStrings__QuotesDb.
-        /// </summary>
-        public const string ConnectionStringName = "QuotesDb";
-
-        public const string ReadinessTag = "ready";
-
-        public const string OutboxTag = "outbox";
-
-        private const string DatabaseHealthCheckName = "postgres";
-
-        private const string OutboxHealthCheckName = "outbox";
-
         // Proves the database is reachable and the migrations have run, not just that the server is up.
         private const string DatabaseHealthQuery = "SELECT 1 FROM quotes LIMIT 1;";
 
@@ -89,7 +77,7 @@ namespace Quotes.Infrastructure.Extensions
         /// </summary>
         public static IHealthChecksBuilder AddOutboxHealthCheck(this IHealthChecksBuilder builder)
         {
-            return builder.AddCheck<OutboxHealthCheck>(OutboxHealthCheckName, tags: [OutboxTag]);
+            return builder.AddCheck<OutboxHealthCheck>(HealthCheckNames.Outbox, tags: [HealthCheckTags.Outbox]);
         }
 
         public static IHealthChecksBuilder AddDatabaseHealthCheck(this IHealthChecksBuilder builder)
@@ -97,17 +85,17 @@ namespace Quotes.Infrastructure.Extensions
             return builder.AddNpgSql(
                 GetConnectionString,
                 healthQuery: DatabaseHealthQuery,
-                name: DatabaseHealthCheckName,
-                tags: [ReadinessTag]);
+                name: HealthCheckNames.Database,
+                tags: [HealthCheckTags.Readiness]);
         }
 
         private static string GetConnectionString(IServiceProvider serviceProvider)
         {
             IConfiguration configuration = serviceProvider.GetRequiredService<IConfiguration>();
 
-            return configuration.GetConnectionString(ConnectionStringName)
+            return configuration.GetConnectionString(ConnectionStringNames.QuotesDb)
                 ?? throw new InvalidOperationException(
-                    $"Connection string '{ConnectionStringName}' is not configured. Set ConnectionStrings__{ConnectionStringName}.");
+                    MessageFormatter.Format(ErrorMessages.ConnectionStringMissing, ConnectionStringNames.QuotesDb));
         }
     }
 }

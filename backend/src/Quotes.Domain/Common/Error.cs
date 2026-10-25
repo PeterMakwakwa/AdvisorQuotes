@@ -1,4 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
+using Quotes.Domain.Errors;
+using Quotes.Domain.Observability.Messages;
 
 namespace Quotes.Domain.Common
 {
@@ -8,10 +10,6 @@ namespace Quotes.Domain.Common
         Justification = "'Error' is only a keyword in Visual Basic; this service is C#-only and the name is the clearest one.")]
     public sealed record Error
     {
-        private const string ValidationFailedCode = "Validation.Failed";
-
-        private const string ValidationFailedMessage = "One or more validation errors occurred.";
-
         public required string Code { get; init; }
 
         public required string Message { get; init; }
@@ -32,8 +30,8 @@ namespace Quotes.Domain.Common
         {
             return new Error
             {
-                Code = ValidationFailedCode,
-                Message = ValidationFailedMessage,
+                Code = ErrorCodes.ValidationFailed,
+                Message = ResponseMessages.ValidationFailed,
                 Type = ErrorType.Validation,
                 ValidationErrors = validationErrors
             };

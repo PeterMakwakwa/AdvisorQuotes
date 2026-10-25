@@ -1,4 +1,5 @@
 using System.Globalization;
+using Quotes.Api.Constants;
 using Serilog;
 using Serilog.Formatting.Compact;
 
@@ -11,14 +12,6 @@ namespace Quotes.Api.Logging
     /// </summary>
     public static class LoggingExtensions
     {
-        public const string FormatKey = "Logging:Format";
-
-        public const string TextFormat = "text";
-
-        public const string JsonFormat = "json";
-
-        private const string TextTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] trace={TraceId} {SourceContext}: {Message:lj}{NewLine}{Exception}";
-
         public static IServiceCollection AddQuotesLogging(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
         {
             bool useJson = UsesJson(configuration, environment);
@@ -36,7 +29,7 @@ namespace Quotes.Api.Logging
                 }
                 else
                 {
-                    logger.WriteTo.Console(outputTemplate: TextTemplate, formatProvider: CultureInfo.InvariantCulture);
+                    logger.WriteTo.Console(outputTemplate: LoggingFormats.TextTemplate, formatProvider: CultureInfo.InvariantCulture);
                 }
             });
 
@@ -45,14 +38,14 @@ namespace Quotes.Api.Logging
 
         public static bool UsesJson(IConfiguration configuration, IHostEnvironment environment)
         {
-            string? format = configuration[FormatKey];
+            string? format = configuration[ConfigurationKeys.LoggingFormat];
 
-            if (string.Equals(format, JsonFormat, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(format, LoggingFormats.Json, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
 
-            if (string.Equals(format, TextFormat, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(format, LoggingFormats.Text, StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }

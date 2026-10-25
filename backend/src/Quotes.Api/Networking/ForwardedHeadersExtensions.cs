@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
+using Quotes.Domain.Observability.Messages;
 
 namespace Quotes.Api.Networking
 {
@@ -18,9 +19,11 @@ namespace Quotes.Api.Networking
         {
             services.AddOptions<ForwardedHeadersSettings>()
                 .BindConfiguration(ForwardedHeadersSettings.SectionName)
-                .Validate(settings => settings.KnownProxies.All(proxy => IPAddress.TryParse(proxy, out _)), "ForwardedHeaders:KnownProxies must be IP addresses.")
-                .Validate(settings => settings.KnownNetworks.All(network => System.Net.IPNetwork.TryParse(network, out _)), "ForwardedHeaders:KnownNetworks must be CIDR ranges such as 10.0.0.0/16.")
-                .Validate(settings => settings.ForwardLimit is >= MinForwardLimit and <= MaxForwardLimit, "ForwardedHeaders:ForwardLimit must be between 1 and 10.")
+                .Validate(settings => settings.KnownProxies.All(proxy => IPAddress.TryParse(proxy, out _)), ErrorMessages.KnownProxiesInvalid)
+                .Validate(settings => settings.KnownNetworks.All(network => System.Net.IPNetwork.TryParse(network, out _)), ErrorMessages.KnownNetworksInvalid)
+                .Validate(
+                    settings => settings.ForwardLimit is >= MinForwardLimit and <= MaxForwardLimit,
+                    MessageFormatter.Format(ErrorMessages.ForwardLimitOutOfRange, MinForwardLimit, MaxForwardLimit))
                 .ValidateOnStart();
 
             services.AddOptions<ForwardedHeadersOptions>()

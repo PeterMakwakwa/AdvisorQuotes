@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
+using Quotes.Api.Constants;
 using Quotes.Api.Logging;
 using Quotes.Application.Interfaces;
 using Quotes.Application.Models.Queries;
@@ -107,7 +108,7 @@ namespace Quotes.IntegrationTests
         public void LogFormat_IsTextInDevelopmentAndJsonElsewhere_UnlessConfigured(string? format, string environment, bool expectJson)
         {
             IConfiguration configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?> { [LoggingExtensions.FormatKey] = format })
+                .AddInMemoryCollection(new Dictionary<string, string?> { [ConfigurationKeys.LoggingFormat] = format })
                 .Build();
             IHostEnvironment hostEnvironment = new HostingEnvironment { EnvironmentName = environment };
 
