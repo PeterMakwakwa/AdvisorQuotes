@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { ApiError } from '@/api/http';
 import type { CreateQuoteRequest } from '@/api/types';
 import { todayIsoDate } from '@/lib/format';
+import { messages } from '@/lib/messages';
 import { PRODUCTS } from './products';
 
 // Zod probes `new Function` to speed up parsing. Our CSP forbids eval, so the probe would log a security-policy
@@ -30,30 +31,30 @@ export function buildQuoteFormSchema(today: () => string = todayIsoDate) {
     clientFullName: z
       .string()
       .trim()
-      .min(1, "Enter the client's full name.")
-      .max(FIELD_LENGTHS.clientFullName, `Use ${FIELD_LENGTHS.clientFullName} characters or fewer.`),
+      .min(1, messages.quoteValidation.fullNameRequired)
+      .max(FIELD_LENGTHS.clientFullName, messages.quoteValidation.tooLong(FIELD_LENGTHS.clientFullName)),
     dateOfBirth: z.iso
-      .date("Enter the client's date of birth.")
-      .refine((dateOfBirth) => dateOfBirth < today(), 'Date of birth must be in the past.'),
+      .date(messages.quoteValidation.dateOfBirthRequired)
+      .refine((dateOfBirth) => dateOfBirth < today(), messages.quoteValidation.dateOfBirthNotInPast),
     isSmoker: z.boolean(),
-    productCode: z.string().min(1, 'Choose a product.'),
+    productCode: z.string().min(1, messages.quoteValidation.productRequired),
     coverAmount: z
       .string()
       .trim()
-      .min(1, 'Enter the cover amount.')
-      .regex(MONEY_PATTERN, 'Enter an amount greater than zero, with at most two decimals.')
-      .refine((value) => Number(value) > 0, 'Enter an amount greater than zero, with at most two decimals.'),
+      .min(1, messages.quoteValidation.coverAmountRequired)
+      .regex(MONEY_PATTERN, messages.quoteValidation.coverAmountInvalid)
+      .refine((value) => Number(value) > 0, messages.quoteValidation.coverAmountInvalid),
     termYears: z
       .string()
       .trim()
-      .min(1, 'Enter the term in years.')
-      .regex(WHOLE_NUMBER_PATTERN, 'Enter a whole number of years.')
-      .refine((value) => Number(value) > 0, 'Enter a whole number of years.'),
+      .min(1, messages.quoteValidation.termRequired)
+      .regex(WHOLE_NUMBER_PATTERN, messages.quoteValidation.termInvalid)
+      .refine((value) => Number(value) > 0, messages.quoteValidation.termInvalid),
     adviserReference: z
       .string()
       .trim()
-      .max(FIELD_LENGTHS.adviserReference, `Use ${FIELD_LENGTHS.adviserReference} characters or fewer.`),
-    notes: z.string().trim().max(FIELD_LENGTHS.notes, `Use ${FIELD_LENGTHS.notes} characters or fewer.`),
+      .max(FIELD_LENGTHS.adviserReference, messages.quoteValidation.tooLong(FIELD_LENGTHS.adviserReference)),
+    notes: z.string().trim().max(FIELD_LENGTHS.notes, messages.quoteValidation.tooLong(FIELD_LENGTHS.notes)),
   });
 }
 
@@ -106,8 +107,8 @@ export function buildStatusChangeSchema(reasonRequired: boolean) {
     reason: z
       .string()
       .trim()
-      .max(FIELD_LENGTHS.statusReason, `Use ${FIELD_LENGTHS.statusReason} characters or fewer.`)
-      .refine((reason) => !reasonRequired || reason !== '', 'Give a reason for declining the quote.'),
+      .max(FIELD_LENGTHS.statusReason, messages.quoteValidation.tooLong(FIELD_LENGTHS.statusReason))
+      .refine((reason) => !reasonRequired || reason !== '', messages.quoteValidation.declineReasonRequired),
   });
 }
 

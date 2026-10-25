@@ -6,6 +6,7 @@ import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { useAdviser } from '@/features/adviser/AdviserContext';
+import { messages } from '@/lib/messages';
 import type { QuoteFilters } from '../queries';
 import { STATUS_LABELS } from '../status';
 
@@ -35,19 +36,19 @@ export function QuoteFiltersBar({ filters, onChange }: QuoteFiltersBarProps) {
   return (
     <form
       role="search"
-      aria-label="Filter quotes"
+      aria-label={messages.quoteFilters.label}
       onSubmit={apply}
       className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end"
     >
       <Field>
-        <FieldLabel htmlFor="filter-status">Status</FieldLabel>
+        <FieldLabel htmlFor="filter-status">{messages.quoteFilters.status}</FieldLabel>
         <NativeSelect
           id="filter-status"
           className="w-full"
           value={filters.status ?? ''}
           onChange={(event) => onChange({ ...filters, status: (event.target.value || undefined) as QuoteStatus | undefined })}
         >
-          <NativeSelectOption value="">All statuses</NativeSelectOption>
+          <NativeSelectOption value="">{messages.quoteFilters.allStatuses}</NativeSelectOption>
           {QUOTE_STATUSES.map((status) => (
             <NativeSelectOption key={status} value={status}>
               {STATUS_LABELS[status]}
@@ -56,22 +57,22 @@ export function QuoteFiltersBar({ filters, onChange }: QuoteFiltersBarProps) {
         </NativeSelect>
       </Field>
       <Field>
-        <FieldLabel htmlFor="filter-adviser">Adviser ID</FieldLabel>
-        <Input id="filter-adviser" value={adviserId} onChange={(event) => setAdviserId(event.target.value)} placeholder="Any adviser" />
+        <FieldLabel htmlFor="filter-adviser">{messages.quoteFilters.adviserId}</FieldLabel>
+        <Input id="filter-adviser" value={adviserId} onChange={(event) => setAdviserId(event.target.value)} placeholder={messages.quoteFilters.anyAdviser} />
       </Field>
       <Field>
-        <FieldLabel htmlFor="filter-reference">Adviser reference</FieldLabel>
+        <FieldLabel htmlFor="filter-reference">{messages.quoteFilters.adviserReference}</FieldLabel>
         <Input
           id="filter-reference"
           value={adviserReference}
           onChange={(event) => setAdviserReference(event.target.value)}
-          placeholder="e.g. CRM-2026-0042"
+          placeholder={messages.quoteFilters.adviserReferencePlaceholder}
         />
       </Field>
       <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1">
         <Button type="submit" variant="secondary">
           <SearchIcon data-icon="inline-start" />
-          Search
+          {messages.quoteFilters.search}
         </Button>
         <Button
           type="button"
@@ -80,12 +81,12 @@ export function QuoteFiltersBar({ filters, onChange }: QuoteFiltersBarProps) {
           disabled={currentAdviserId.trim() === ''}
         >
           <UserIcon data-icon="inline-start" />
-          My quotes
+          {messages.quoteFilters.myQuotes}
         </Button>
         {hasFilters && (
           <Button type="button" variant="ghost" onClick={() => onChange({})}>
             <XIcon data-icon="inline-start" />
-            Clear
+            {messages.quoteFilters.clear}
           </Button>
         )}
       </div>

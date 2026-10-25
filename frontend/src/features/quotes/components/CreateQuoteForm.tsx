@@ -26,6 +26,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAdviser } from '@/features/adviser/AdviserContext';
 import { todayIsoDate } from '@/lib/format';
+import { messages } from '@/lib/messages';
 import { clientProductKey, findOpenQuotesForClient } from '../openQuotes';
 import { PRODUCTS } from '../products';
 import { useCreateQuote } from '../queries';
@@ -85,7 +86,7 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
     setAlertError(null);
 
     if (adviserId.trim() === '') {
-      setAlertError(new Error('Enter your adviser ID at the top of the page before capturing a quote.'));
+      setAlertError(new Error(messages.createQuote.adviserMissing));
       return;
     }
 
@@ -124,26 +125,26 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex max-w-3xl flex-col gap-6">
-      {alertError !== null && <ErrorAlert error={alertError} title="The quote was not created" />}
+      {alertError !== null && <ErrorAlert error={alertError} title={messages.createQuote.notCreated} />}
 
       <Card>
         <CardHeader>
           <CardTitle>
-            <h2>Quote details</h2>
+            <h2>{messages.createQuote.detailsTitle}</h2>
           </CardTitle>
-          <CardDescription>The premium is calculated by the server when the quote is captured.</CardDescription>
+          <CardDescription>{messages.createQuote.detailsDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <FieldGroup>
             <FieldSet>
-              <FieldLegend>Client</FieldLegend>
+              <FieldLegend>{messages.createQuote.clientLegend}</FieldLegend>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Controller
                   name="clientFullName"
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="clientFullName">Full name</FieldLabel>
+                      <FieldLabel htmlFor="clientFullName">{messages.createQuote.fullName}</FieldLabel>
                       <Input
                         {...field}
                         id="clientFullName"
@@ -161,7 +162,7 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="dateOfBirth">Date of birth</FieldLabel>
+                      <FieldLabel htmlFor="dateOfBirth">{messages.createQuote.dateOfBirth}</FieldLabel>
                       {/* A native date input: typing a birth year beats paging back decades in a calendar popover. */}
                       <Input
                         {...field}
@@ -190,8 +191,8 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
                       onBlur={field.onBlur}
                     />
                     <FieldContent>
-                      <FieldLabel htmlFor="isSmoker">The client smokes</FieldLabel>
-                      <FieldDescription>Smokers pay a loading on the premium.</FieldDescription>
+                      <FieldLabel htmlFor="isSmoker">{messages.createQuote.smoker}</FieldLabel>
+                      <FieldDescription>{messages.createQuote.smokerDescription}</FieldDescription>
                     </FieldContent>
                   </Field>
                 )}
@@ -201,14 +202,14 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
             <FieldSeparator />
 
             <FieldSet>
-              <FieldLegend>Cover</FieldLegend>
+              <FieldLegend>{messages.createQuote.coverLegend}</FieldLegend>
               <div className="grid gap-4 sm:grid-cols-3">
                 <Controller
                   name="productCode"
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="productCode">Product</FieldLabel>
+                      <FieldLabel htmlFor="productCode">{messages.createQuote.product}</FieldLabel>
                       <NativeSelect
                         {...field}
                         id="productCode"
@@ -231,10 +232,10 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="coverAmount">Cover amount</FieldLabel>
+                      <FieldLabel htmlFor="coverAmount">{messages.createQuote.coverAmount}</FieldLabel>
                       <InputGroup>
                         <InputGroupAddon>
-                          <InputGroupText>R</InputGroupText>
+                          <InputGroupText>{messages.common.currencySymbol}</InputGroupText>
                         </InputGroupAddon>
                         <InputGroupInput
                           {...field}
@@ -253,7 +254,7 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="termYears">Term</FieldLabel>
+                      <FieldLabel htmlFor="termYears">{messages.createQuote.term}</FieldLabel>
                       <InputGroup>
                         <InputGroupInput
                           {...field}
@@ -263,7 +264,7 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
                           aria-describedby={describedBy(field.name, fieldState)}
                         />
                         <InputGroupAddon align="inline-end">
-                          <InputGroupText>years</InputGroupText>
+                          <InputGroupText>{messages.common.years}</InputGroupText>
                         </InputGroupAddon>
                       </InputGroup>
                       <FieldMessage name={field.name} fieldState={fieldState} />
@@ -276,14 +277,14 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
             <FieldSeparator />
 
             <FieldSet>
-              <FieldLegend>Reference and notes</FieldLegend>
+              <FieldLegend>{messages.createQuote.referenceLegend}</FieldLegend>
               <Controller
                 name="adviserReference"
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="adviserReference">
-                      Adviser reference <span className="font-normal text-muted-foreground">(optional)</span>
+                      {messages.createQuote.adviserReference} <span className="font-normal text-muted-foreground">{messages.common.optional}</span>
                     </FieldLabel>
                     <Input
                       {...field}
@@ -292,9 +293,7 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
                       aria-invalid={fieldState.invalid}
                       aria-describedby={describedBy(field.name, fieldState, true)}
                     />
-                    <FieldDescription id="adviserReference-description">
-                      Your own reference, for example a CRM case number.
-                    </FieldDescription>
+                    <FieldDescription id="adviserReference-description">{messages.createQuote.adviserReferenceDescription}</FieldDescription>
                     <FieldMessage name={field.name} fieldState={fieldState} />
                   </Field>
                 )}
@@ -305,7 +304,7 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="notes">
-                      Notes <span className="font-normal text-muted-foreground">(optional)</span>
+                      {messages.createQuote.notes} <span className="font-normal text-muted-foreground">{messages.common.optional}</span>
                     </FieldLabel>
                     <Textarea
                       {...field}
@@ -329,11 +328,16 @@ export function CreateQuoteForm({ onCreated }: CreateQuoteFormProps) {
         </CardContent>
         <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t">
           <p className="text-sm text-muted-foreground">
-            Capturing as <span className="font-medium text-foreground">{adviserId.trim() === '' ? 'no adviser set' : adviserId}</span>
+            {messages.createQuote.capturingAs}{' '}
+            <span className="font-medium text-foreground">{adviserId.trim() === '' ? messages.createQuote.noAdviserSet : adviserId}</span>
           </p>
           <Button type="submit" disabled={createQuote.isPending || isCheckingClient}>
             {(createQuote.isPending || isCheckingClient) && <Spinner data-icon="inline-start" />}
-            {createQuote.isPending ? 'Capturing quote…' : warningQuotes.length > 0 ? 'Capture anyway' : 'Capture quote'}
+            {createQuote.isPending
+              ? messages.createQuote.capturing
+              : warningQuotes.length > 0
+                ? messages.createQuote.captureAnyway
+                : messages.createQuote.capture}
           </Button>
         </CardFooter>
       </Card>

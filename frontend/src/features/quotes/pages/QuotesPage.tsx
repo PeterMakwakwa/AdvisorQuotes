@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Spinner } from '@/components/ui/spinner';
+import { messages } from '@/lib/messages';
 import { QuoteFiltersBar } from '../components/QuoteFiltersBar';
 import { QuoteTable, QuoteTableSkeleton } from '../components/QuoteTable';
 import { useQuoteList, type QuoteFilters } from '../queries';
@@ -44,23 +45,21 @@ export function QuotesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Quotes"
+        title={messages.quoteList.title}
         description={
-          quotes.isSuccess
-            ? `${totalCount === 1 ? '1 quote' : `${totalCount} quotes`}${items.length < totalCount ? `, showing ${items.length}` : ''}, newest first`
-            : 'Every quote captured by advisers, newest first'
+          quotes.isSuccess ? messages.quoteList.summary(totalCount, items.length) : messages.quoteList.description
         }
         actions={
           <Button asChild>
             <Link to="/quotes/new">
               <PlusIcon data-icon="inline-start" />
-              New quote
+              {messages.common.newQuote}
             </Link>
           </Button>
         }
       />
 
-      {quotes.isError && <ErrorAlert error={quotes.error} title="Quotes could not be loaded" onRetry={() => void quotes.refetch()} />}
+      {quotes.isError && <ErrorAlert error={quotes.error} title={messages.quoteList.loadFailed} onRetry={() => void quotes.refetch()} />}
 
       <Card>
         <CardHeader className="border-b">
@@ -76,12 +75,12 @@ export function QuotesPage() {
                 <EmptyMedia variant="icon">
                   <FileTextIcon />
                 </EmptyMedia>
-                <EmptyTitle>No quotes found</EmptyTitle>
-                <EmptyDescription>No quotes match these filters. Clear them, or capture a new quote.</EmptyDescription>
+                <EmptyTitle>{messages.quoteList.emptyTitle}</EmptyTitle>
+                <EmptyDescription>{messages.quoteList.emptyDescription}</EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
                 <Button variant="outline" asChild>
-                  <Link to="/quotes/new">Capture a quote</Link>
+                  <Link to="/quotes/new">{messages.quoteList.captureQuote}</Link>
                 </Button>
               </EmptyContent>
             </Empty>
@@ -95,7 +94,7 @@ export function QuotesPage() {
         <div className="flex justify-center">
           <Button variant="outline" onClick={() => void quotes.fetchNextPage()} disabled={quotes.isFetchingNextPage}>
             {quotes.isFetchingNextPage && <Spinner data-icon="inline-start" />}
-            {quotes.isFetchingNextPage ? 'Loading…' : 'Load more'}
+            {quotes.isFetchingNextPage ? messages.quoteList.loading : messages.quoteList.loadMore}
           </Button>
         </div>
       )}

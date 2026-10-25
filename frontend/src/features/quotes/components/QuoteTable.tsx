@@ -3,12 +3,24 @@ import type { QuoteSummary } from '@/api/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatAmount, formatDateTime, formatMoney } from '@/lib/format';
+import { messages } from '@/lib/messages';
 import { productLabel } from '../products';
 import { StatusBadge } from './StatusBadge';
 
-const COLUMNS = ['Reference', 'Client', 'Product', 'Cover', 'Monthly premium', 'Status', 'Adviser', 'Created'] as const;
+const { columns } = messages.quoteTable;
 
-const NUMERIC_COLUMNS = new Set<string>(['Cover', 'Monthly premium']);
+const COLUMNS = [
+  columns.reference,
+  columns.client,
+  columns.product,
+  columns.cover,
+  columns.monthlyPremium,
+  columns.status,
+  columns.adviser,
+  columns.created,
+] as const;
+
+const NUMERIC_COLUMNS = new Set<string>([columns.cover, columns.monthlyPremium]);
 
 function QuoteTableHeader() {
   return (
@@ -29,7 +41,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteSummary[] }) {
 
   return (
     <Table>
-      <TableCaption className="sr-only">Quotes, newest first</TableCaption>
+      <TableCaption className="sr-only">{messages.quoteTable.caption}</TableCaption>
       <QuoteTableHeader />
       <TableBody>
         {quotes.map((quote) => (
@@ -64,7 +76,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteSummary[] }) {
 export function QuoteTableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <Table aria-busy="true">
-      <TableCaption className="sr-only">Loading quotes</TableCaption>
+      <TableCaption className="sr-only">{messages.quoteTable.loadingCaption}</TableCaption>
       <QuoteTableHeader />
       <TableBody>
         {Array.from({ length: rows }, (_, row) => (

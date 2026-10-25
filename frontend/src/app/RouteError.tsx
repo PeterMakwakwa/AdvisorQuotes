@@ -5,6 +5,7 @@ import { newTraceparent } from '@/api/tracing';
 import { TraceId } from '@/components/TraceId';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { messages } from '@/lib/messages';
 
 function isChunkLoadError(error: unknown): boolean {
   // After a deploy, an open tab can ask for a lazy page chunk that no longer exists; a reload fetches the new build.
@@ -21,18 +22,18 @@ export function RouteError() {
   const reference = useMemo(() => newTraceparent().traceId, []);
   const newVersion = isChunkLoadError(error);
 
-  console.error(`Unhandled UI error (reference ${reference})`, error);
+  console.error(messages.routeError.consoleLog(reference), error);
 
   if (isRouteErrorResponse(error) && error.status === 404) {
     return (
       <Empty className="border">
         <EmptyHeader>
-          <EmptyTitle>Page not found</EmptyTitle>
-          <EmptyDescription>The page you asked for does not exist.</EmptyDescription>
+          <EmptyTitle>{messages.routeError.notFoundTitle}</EmptyTitle>
+          <EmptyDescription>{messages.routeError.notFoundDescription}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button variant="outline" asChild>
-            <Link to="/quotes">Go to quotes</Link>
+            <Link to="/quotes">{messages.common.goToQuotes}</Link>
           </Button>
         </EmptyContent>
       </Empty>
@@ -45,21 +46,19 @@ export function RouteError() {
         <EmptyMedia variant="icon">
           <TriangleAlertIcon />
         </EmptyMedia>
-        <EmptyTitle>{newVersion ? 'A new version is available' : 'This page could not be shown'}</EmptyTitle>
+        <EmptyTitle>{newVersion ? messages.routeError.newVersionTitle : messages.routeError.failedTitle}</EmptyTitle>
         <EmptyDescription>
-          {newVersion
-            ? 'The app was updated while you had it open. Reload to continue.'
-            : 'Something went wrong on our side. Reload the page, and if it keeps happening contact support with the reference below.'}
+          {newVersion ? messages.routeError.newVersionDescription : messages.routeError.failedDescription}
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent className="items-center">
         <div className="flex flex-wrap justify-center gap-2">
           <Button onClick={() => window.location.reload()}>
             <RotateCwIcon data-icon="inline-start" />
-            Reload
+            {messages.common.reload}
           </Button>
           <Button variant="outline" asChild>
-            <Link to="/quotes">Go to quotes</Link>
+            <Link to="/quotes">{messages.common.goToQuotes}</Link>
           </Button>
         </div>
         {!newVersion && <TraceId traceId={reference} />}

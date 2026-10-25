@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Toaster } from '@/components/ui/sonner';
 import { useAdviser } from '@/features/adviser/AdviserContext';
+import { messages } from '@/lib/messages';
 import { cn } from '@/lib/utils';
 
 function navLinkClass({ isActive }: { isActive: boolean }): string {
@@ -26,7 +27,7 @@ export function AppLayout() {
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:shadow"
       >
-        Skip to content
+        {messages.layout.skipToContent}
       </a>
       <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5">
@@ -34,19 +35,19 @@ export function AppLayout() {
             <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <FileStackIcon className="size-4" />
             </span>
-            Advisor Quotes
+            {messages.common.appName}
           </NavLink>
-          <nav aria-label="Main" className="flex items-center gap-1">
+          <nav aria-label={messages.layout.mainNavigation} className="flex items-center gap-1">
             <NavLink to="/quotes" end className={({ isActive }) => navLinkClass({ isActive: isActive || inQuotesSection })}>
-              Quotes
+              {messages.common.quotes}
             </NavLink>
             <NavLink to="/quotes/new" className={navLinkClass}>
-              New quote
+              {messages.common.newQuote}
             </NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <Label htmlFor="adviser-id" className="text-xs text-muted-foreground">
-              Adviser ID
+              {messages.layout.adviserId}
             </Label>
             <Input
               id="adviser-id"

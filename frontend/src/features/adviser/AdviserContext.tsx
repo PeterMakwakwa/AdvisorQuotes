@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { messages } from '@/lib/messages';
 
 // Authentication is out of scope, so the adviser says who they are. It fills AdviserId on new quotes and ChangedBy on
 // status changes. With sign-in this would come from the identity token instead.
@@ -48,7 +49,7 @@ export function useAdviser(): AdviserContextValue {
   const context = useContext(AdviserContext);
 
   if (context === null) {
-    throw new Error('useAdviser must be used inside AdviserProvider.');
+    throw new Error(messages.developer.adviserProviderMissing);
   }
 
   return context;

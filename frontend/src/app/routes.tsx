@@ -3,6 +3,7 @@ import { Link, Navigate, type RouteObject } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Spinner } from '@/components/ui/spinner';
+import { messages } from '@/lib/messages';
 import { AppLayout } from './AppLayout';
 import { RouteError } from './RouteError';
 
@@ -13,12 +14,12 @@ function NotFoundPage() {
         <EmptyMedia variant="icon">
           <CompassIcon />
         </EmptyMedia>
-        <EmptyTitle>Page not found</EmptyTitle>
-        <EmptyDescription>The page you asked for does not exist.</EmptyDescription>
+        <EmptyTitle>{messages.routeError.notFoundTitle}</EmptyTitle>
+        <EmptyDescription>{messages.routeError.notFoundDescription}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Button variant="outline" asChild>
-          <Link to="/quotes">Go to quotes</Link>
+          <Link to="/quotes">{messages.common.goToQuotes}</Link>
         </Button>
       </EmptyContent>
     </Empty>

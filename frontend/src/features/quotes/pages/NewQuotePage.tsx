@@ -2,6 +2,7 @@ import { ArrowLeftIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
+import { messages } from '@/lib/messages';
 import { CreateQuoteForm } from '../components/CreateQuoteForm';
 import type { QuoteDetailLocationState } from './QuoteDetailPage';
 
@@ -13,10 +14,10 @@ export function NewQuotePage() {
       <Button variant="ghost" size="sm" className="w-fit" asChild>
         <Link to="/quotes">
           <ArrowLeftIcon data-icon="inline-start" />
-          Quotes
+          {messages.common.quotes}
         </Link>
       </Button>
-      <PageHeader title="New quote" description="Capture a quote for a client. It is saved as a draft." />
+      <PageHeader title={messages.newQuote.title} description={messages.newQuote.description} />
       <CreateQuoteForm
         onCreated={(result) => {
           const state: QuoteDetailLocationState = { created: { replayed: result.replayed, traceId: result.traceId } };

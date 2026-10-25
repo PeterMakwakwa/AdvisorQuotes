@@ -22,6 +22,7 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAdviser } from '@/features/adviser/AdviserContext';
+import { messages } from '@/lib/messages';
 import { useChangeQuoteStatus } from '../queries';
 import { buildStatusChangeSchema, FIELD_LENGTHS, type StatusChangeFormValues } from '../quoteForm';
 import { STATUS_ACTIONS, STATUS_LABELS, isReasonRequired } from '../status';
@@ -43,12 +44,10 @@ export function StatusChangePanel({ quote }: { quote: Quote }) {
     <Card>
       <CardHeader>
         <CardTitle>
-          <h2>Status</h2>
+          <h2>{messages.statusChange.title}</h2>
         </CardTitle>
         <CardDescription>
-          {isFinal
-            ? `This quote is ${STATUS_LABELS[quote.status].toLowerCase()}. No further status changes are possible.`
-            : 'Move the quote on. Every change is kept in the history.'}
+          {isFinal ? messages.statusChange.finalDescription(STATUS_LABELS[quote.status]) : messages.statusChange.openDescription}
         </CardDescription>
       </CardHeader>
       {(!isFinal || lastTraceId !== null) && (
@@ -117,8 +116,8 @@ function StatusChangeDialogContent({ quote, target, onDone }: StatusChangeDialog
       { newStatus: target, reason: trimmed === '' ? undefined : trimmed, changedBy: adviserId.trim() },
       {
         onSuccess: (result) => {
-          toast.success(`Moved to ${STATUS_LABELS[result.quote.status]}`, {
-            description: `${quote.externalReference} · support ref ${result.traceId}`,
+          toast.success(messages.statusChange.movedTo(STATUS_LABELS[result.quote.status]), {
+            description: messages.statusChange.movedToDescription(quote.externalReference, result.traceId),
             duration: 8000,
           });
           onDone(result.traceId);
@@ -142,12 +141,9 @@ function StatusChangeDialogContent({ quote, target, onDone }: StatusChangeDialog
     <DialogContent>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         <DialogHeader>
-          <DialogTitle>
-            {STATUS_ACTIONS[target]}: {quote.externalReference}
-          </DialogTitle>
+          <DialogTitle>{messages.statusChange.dialogTitle(STATUS_ACTIONS[target], quote.externalReference)}</DialogTitle>
           <DialogDescription>
-            {quote.client.fullName}&apos;s quote moves from {STATUS_LABELS[quote.status]} to {STATUS_LABELS[target]}, recorded as{' '}
-            {adviserId}.
+            {messages.statusChange.dialogDescription(quote.client.fullName, STATUS_LABELS[quote.status], STATUS_LABELS[target], adviserId)}
           </DialogDescription>
         </DialogHeader>
 
@@ -157,7 +153,8 @@ function StatusChangeDialogContent({ quote, target, onDone }: StatusChangeDialog
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor="status-reason">
-                Reason {!reasonRequired && <span className="font-normal text-muted-foreground">(optional)</span>}
+                {messages.statusChange.reason}{' '}
+                {!reasonRequired && <span className="font-normal text-muted-foreground">{messages.common.optional}</span>}
               </FieldLabel>
               <Textarea
                 {...field}
@@ -168,19 +165,20 @@ function StatusChangeDialogContent({ quote, target, onDone }: StatusChangeDialog
                 aria-describedby={fieldState.invalid ? 'status-reason-description status-reason-error' : 'status-reason-description'}
               />
               <FieldDescription id="status-reason-description">
-                {reasonRequired ? 'Required when declining. ' : ''}It is kept in the status history.
+                {reasonRequired && messages.statusChange.reasonRequiredHint}
+                {messages.statusChange.reasonKeptHint}
               </FieldDescription>
               {fieldState.invalid && <FieldError id="status-reason-error" errors={[fieldState.error]} />}
             </Field>
           )}
         />
 
-        {showRequestError && <ErrorAlert error={changeStatus.error} title="The status was not changed" />}
+        {showRequestError && <ErrorAlert error={changeStatus.error} title={messages.statusChange.notChanged} />}
 
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={changeStatus.isPending}>
-              Cancel
+              {messages.common.cancel}
             </Button>
           </DialogClose>
           <Button

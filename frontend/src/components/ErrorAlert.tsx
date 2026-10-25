@@ -2,6 +2,7 @@ import { CircleAlertIcon, RotateCwIcon } from 'lucide-react';
 import { ApiError } from '@/api/http';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { messages } from '@/lib/messages';
 import { TraceId } from './TraceId';
 
 interface ErrorAlertProps {
@@ -10,8 +11,8 @@ interface ErrorAlertProps {
   onRetry?: () => void;
 }
 
-export function ErrorAlert({ error, title = 'Something went wrong', onRetry }: ErrorAlertProps) {
-  const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
+export function ErrorAlert({ error, title = messages.common.somethingWentWrong, onRetry }: ErrorAlertProps) {
+  const message = error instanceof Error ? error.message : messages.common.unexpectedError;
 
   return (
     <Alert variant="destructive" role="alert">
@@ -25,7 +26,7 @@ export function ErrorAlert({ error, title = 'Something went wrong', onRetry }: E
         <AlertAction>
           <Button type="button" variant="outline" size="sm" onClick={onRetry}>
             <RotateCwIcon data-icon="inline-start" />
-            Retry
+            {messages.common.retry}
           </Button>
         </AlertAction>
       )}
